@@ -4,8 +4,8 @@ A self-hosted Phoenix LiveView application that helps security/compliance profes
 
 ## Prerequisites
 
-- Erlang 27+
-- Elixir 1.18+ (OTP 27)
+- Erlang/OTP 28+
+- Elixir 1.19+ (OTP 28)
 - Docker & Docker Compose (for PostgreSQL)
 
 ### Installing Erlang & Elixir
@@ -13,7 +13,7 @@ A self-hosted Phoenix LiveView application that helps security/compliance profes
 Using [mise](https://mise.jdx.dev/):
 
 ```bash
-mise use erlang@27 elixir@1.18
+mise use erlang@28 elixir@1.19
 ```
 
 Or [asdf](https://asdf-vm.com/):
@@ -21,10 +21,10 @@ Or [asdf](https://asdf-vm.com/):
 ```bash
 asdf plugin add erlang
 asdf plugin add elixir
-asdf install erlang 27.2
-asdf install elixir 1.18.3-otp-27
-asdf set erlang 27.2
-asdf set elixir 1.18.3-otp-27
+asdf install erlang 28.4.1
+asdf install elixir 1.19.5-otp-28
+asdf set erlang 28.4.1
+asdf set elixir 1.19.5-otp-28
 ```
 
 ## Getting Started
