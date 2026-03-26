@@ -38,11 +38,26 @@ defmodule QuestionnaireCopilot.Vault do
   against the vault. Returns results ranked by similarity score.
   """
   def search_qa_pairs(query) when is_binary(query) and query != "" do
+    # Combine trigram similarity on question + answer, and boost keyword overlap
     from(q in QAPair,
-      where: fragment("similarity(?, ?) > 0.1", q.question, ^query),
-      order_by: [desc: fragment("similarity(?, ?)", q.question, ^query)]
+      where:
+        fragment("similarity(?, ?) > 0.08", q.question, ^query) or
+          fragment("similarity(?, ?) > 0.08", q.answer, ^query),
+      order_by: [
+        desc:
+          fragment(
+            "greatest(similarity(?, ?), similarity(?, ?)) + (similarity(?, ?) * 0.5)",
+            q.question,
+            ^query,
+            q.answer,
+            ^query,
+            q.question,
+            ^query
+          )
+      ]
     )
     |> Repo.all()
+    |> Enum.uniq_by(& &1.id)
   end
 
   def search_qa_pairs(_), do: list_qa_pairs()
@@ -138,8 +153,19 @@ defmodule QuestionnaireCopilot.Vault do
 
   defp maybe_search(_query, search) do
     from(q in QAPair,
-      where: fragment("similarity(?, ?) > 0.1", q.question, ^search),
-      order_by: [desc: fragment("similarity(?, ?)", q.question, ^search)]
+      where:
+        fragment("similarity(?, ?) > 0.08", q.question, ^search) or
+          fragment("similarity(?, ?) > 0.08", q.answer, ^search),
+      order_by: [
+        desc:
+          fragment(
+            "greatest(similarity(?, ?), similarity(?, ?))",
+            q.question,
+            ^search,
+            q.answer,
+            ^search
+          )
+      ]
     )
   end
 

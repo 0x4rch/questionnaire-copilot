@@ -17,7 +17,9 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      |> assign(:matches, find_matches(items, current_index))
      |> assign(:editing_answer, false)
      |> assign(:manual_answer, "")
-     |> assign(:vault_prompt, nil)}
+     |> assign(:vault_prompt, nil)
+     |> assign(:vault_search, "")
+     |> assign(:vault_results, [])}
   end
 
   # Accept a matched answer — already in vault, no prompt needed
@@ -137,6 +139,12 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      |> reload_and_advance()}
   end
 
+  # Search vault from within questionnaire
+  def handle_event("vault-search", %{"vault_search" => query}, socket) do
+    results = if query != "", do: Vault.search_qa_pairs(query), else: []
+    {:noreply, assign(socket, vault_search: query, vault_results: results)}
+  end
+
   # Navigate to a specific question by index
   def handle_event("goto", %{"index" => index}, socket) do
     index = String.to_integer(index)
@@ -225,7 +233,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     assigns = assign(assigns, :current, current)
 
     ~H"""
-    <div phx-window-keydown="keydown">
+    <div id="questionnaire-show" phx-hook="KeyboardNav">
       <%!-- Header with progress --%>
       <div class="flex items-center justify-between mb-2">
         <div>
@@ -252,7 +260,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
       <progress class="progress progress-primary w-full mb-6" value={@done} max={@total}></progress>
 
-      <% show_right_panel = @current && @current.status in [:unmatched, :matched] && !@vault_prompt %>
+      <% show_right_panel = @current && @current.status != :answered && !@vault_prompt %>
       <div :if={@current} class="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <%!-- Left panel --%>
         <div class="lg:col-span-3 space-y-4">
@@ -352,15 +360,34 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
         <%!-- Right panel: suggested matches (2/5 width) --%>
         <div :if={show_right_panel} class="lg:col-span-2">
+          <%!-- Vault search --%>
+          <form phx-change="vault-search" class="mb-3">
+            <label class="input input-bordered input-sm flex items-center gap-2 w-full">
+              <.icon name="hero-magnifying-glass" class="size-3 opacity-50" />
+              <input
+                type="text"
+                name="vault_search"
+                value={@vault_search}
+                placeholder="Search vault..."
+                class="grow border-0 bg-transparent focus:outline-none text-sm"
+                phx-debounce="300"
+              />
+            </label>
+          </form>
+
           <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/50 mb-3">
-            Suggested Matches
+            {if @vault_search != "", do: "Search Results", else: "Suggested Matches"}
           </h3>
-          <div :if={@matches == []} class="card bg-base-100 shadow-sm p-8 text-center">
+
+          <% display_results = if @vault_search != "", do: @vault_results, else: @matches %>
+          <div :if={display_results == []} class="card bg-base-100 shadow-sm p-8 text-center">
             <.icon name="hero-magnifying-glass" class="size-8 mx-auto text-base-content/20 mb-2" />
-            <p class="text-sm text-base-content/40">No matches found in vault</p>
+            <p class="text-sm text-base-content/40">
+              {if @vault_search != "", do: "No results for \"#{@vault_search}\"", else: "No matches found in vault"}
+            </p>
           </div>
           <div class="space-y-3">
-            <div :for={match <- Enum.take(@matches, 5)} class="card bg-base-100 shadow-sm">
+            <div :for={match <- Enum.take(display_results, 5)} class="card bg-base-100 shadow-sm">
               <div class="card-body p-4">
                 <p class="font-medium text-sm">{match.question}</p>
                 <p class="text-xs text-base-content/60 whitespace-pre-wrap mt-1.5 line-clamp-4">{match.answer}</p>
@@ -378,6 +405,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
               </div>
             </div>
           </div>
+
         </div>
       </div>
 

@@ -33,6 +33,18 @@ let Hooks = {
         navigator.clipboard.writeText(text)
       })
     }
+  },
+  KeyboardNav: {
+    mounted() {
+      this.handleEvent("focus", () => {})
+      window.addEventListener("keydown", (e) => {
+        const tag = e.target.tagName
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
+        if (["j", "k", "s"].includes(e.key)) {
+          this.pushEvent("keydown", {key: e.key})
+        }
+      })
+    }
   }
 }
 
