@@ -10,6 +10,16 @@ A self-hosted Phoenix LiveView application that helps security/compliance profes
 
 ---
 
+## Screenshots
+
+| Dashboard | Q&A Vault |
+|:-:|:-:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Vault](docs/screenshots/vault.png) |
+
+| Answering Interface | Dark Mode |
+|:-:|:-:|
+| ![Answering](docs/screenshots/answering.png) | ![Dark Mode](docs/screenshots/dark-answering.png) |
+
 ## Features
 
 - **Q&A Vault** — Maintain a searchable library of approved answers with tags and sources
