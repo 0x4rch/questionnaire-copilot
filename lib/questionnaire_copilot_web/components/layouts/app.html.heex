@@ -1,0 +1,35 @@
+<div class="min-h-screen flex flex-col bg-base-200">
+  <header class="navbar bg-base-100 shadow-sm px-4 sm:px-6 lg:px-8">
+    <div class="flex-1">
+      <a href="/" class="btn btn-ghost text-lg font-bold normal-case gap-2">
+        <.icon name="hero-shield-check" class="size-5 text-primary" />
+        Questionnaire Copilot
+      </a>
+    </div>
+    <div class="flex-none">
+      <ul class="flex px-1 gap-2 items-center">
+        <li>
+          <a href={~p"/vault"} class="btn btn-ghost btn-sm">
+            <.icon name="hero-archive-box" class="size-4" /> Vault
+          </a>
+        </li>
+        <li>
+          <a href={~p"/questionnaires"} class="btn btn-ghost btn-sm">
+            <.icon name="hero-clipboard-document-list" class="size-4" /> Questionnaires
+          </a>
+        </li>
+        <li>
+          <Layouts.theme_toggle />
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main class="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl">
+      {@inner_content}
+    </div>
+  </main>
+</div>
+
+<Layouts.flash_group flash={@flash} />

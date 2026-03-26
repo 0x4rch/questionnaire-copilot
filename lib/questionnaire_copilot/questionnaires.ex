@@ -102,4 +102,16 @@ defmodule QuestionnaireCopilot.Questionnaires do
     done = Enum.count(items, &(&1.status in [:answered, :skipped]))
     {done, total}
   end
+
+  def maybe_mark_completed(questionnaire) do
+    {done, total} = progress(questionnaire)
+
+    if total > 0 and done == total and questionnaire.status != :completed do
+      questionnaire
+      |> Questionnaire.changeset(%{status: :completed})
+      |> Repo.update()
+    else
+      {:ok, questionnaire}
+    end
+  end
 end

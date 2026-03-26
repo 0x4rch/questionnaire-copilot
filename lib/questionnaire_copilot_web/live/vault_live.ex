@@ -93,78 +93,89 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
   # ~H is a sigil that compiles HEEx (HTML + Elixir Expressions) at compile time.
   def render(assigns) do
     ~H"""
-    <div class="max-w-4xl mx-auto">
-      <.header>
-        Q&A Vault
-        <:subtitle>Your library of approved security questionnaire answers</:subtitle>
-        <:actions>
-          <button class="btn btn-primary" phx-click="new">
-            <.icon name="hero-plus" class="size-4" /> Add Q&A Pair
-          </button>
-        </:actions>
-      </.header>
+    <.header>
+      Q&A Vault
+      <:subtitle>Your library of approved security questionnaire answers</:subtitle>
+      <:actions>
+        <button class="btn btn-primary" phx-click="new">
+          <.icon name="hero-plus" class="size-4" /> Add Q&A Pair
+        </button>
+      </:actions>
+    </.header>
 
-      <%!-- Search bar --%>
-      <form phx-change="search" class="mb-6">
+    <%!-- Search bar --%>
+    <form phx-change="search" class="mb-6">
+      <label class="input input-bordered flex items-center gap-2 w-full">
+        <.icon name="hero-magnifying-glass" class="size-4 opacity-50" />
         <input
           type="text"
           name="search"
           value={@search}
           placeholder="Search questions and answers..."
-          class="input input-bordered w-full"
+          class="grow border-0 bg-transparent focus:outline-none"
           phx-debounce="300"
         />
-      </form>
+      </label>
+    </form>
 
-      <%!-- Add/Edit form — shown when @editing is not nil --%>
-      <div :if={@editing} class="card bg-base-200 mb-6">
-        <div class="card-body">
-          <h2 class="card-title">
-            {if @editing == :new, do: "New Q&A Pair", else: "Edit Q&A Pair"}
-          </h2>
-          <.form for={@form} phx-submit="save">
-            <.input field={@form[:question]} type="textarea" label="Question" required />
-            <.input field={@form[:answer]} type="textarea" label="Answer" required />
-            <.input
-              field={@form[:tags]}
-              type="text"
-              label="Tags (comma-separated)"
-              value={(@form[:tags].value || []) |> Enum.join(", ")}
-            />
-            <.input field={@form[:source]} type="text" label="Source" placeholder="e.g. SOC2 2024" />
-            <div class="card-actions justify-end mt-4">
-              <button type="button" class="btn" phx-click="cancel">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save</button>
-            </div>
-          </.form>
-        </div>
-      </div>
-
-      <%!-- Q&A pairs list --%>
-      <div :if={@qa_pairs == []} class="text-center py-12 text-base-content/50">
-        No Q&A pairs yet. Click "Add Q&A Pair" to get started.
-      </div>
-
-      <div :for={qa <- @qa_pairs} class="card bg-base-100 shadow-sm mb-4">
-        <div class="card-body">
-          <h3 class="card-title text-base">{qa.question}</h3>
-          <p class="whitespace-pre-wrap">{qa.answer}</p>
-          <div class="flex flex-wrap gap-2 mt-2">
-            <span :for={tag <- qa.tags} class="badge badge-outline badge-sm">{tag}</span>
-            <span :if={qa.source} class="badge badge-ghost badge-sm">{qa.source}</span>
+    <%!-- Add/Edit form --%>
+    <div :if={@editing} class="card bg-base-100 shadow-sm mb-6">
+      <div class="card-body">
+        <h2 class="card-title text-base">
+          {if @editing == :new, do: "New Q&A Pair", else: "Edit Q&A Pair"}
+        </h2>
+        <.form for={@form} phx-submit="save" class="space-y-2">
+          <.input field={@form[:question]} type="textarea" label="Question" required />
+          <.input field={@form[:answer]} type="textarea" label="Answer" required />
+          <.input
+            field={@form[:tags]}
+            type="text"
+            label="Tags (comma-separated)"
+            value={(@form[:tags].value || []) |> Enum.join(", ")}
+          />
+          <.input field={@form[:source]} type="text" label="Source" placeholder="e.g. SOC2 2024" />
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" class="btn btn-ghost" phx-click="cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
           </div>
-          <div class="card-actions justify-end">
-            <button class="btn btn-ghost btn-sm" phx-click="edit" phx-value-id={qa.id}>
-              <.icon name="hero-pencil-square" class="size-4" /> Edit
-            </button>
-            <button
-              class="btn btn-ghost btn-sm text-error"
-              phx-click="delete"
-              phx-value-id={qa.id}
-              data-confirm="Are you sure?"
-            >
-              <.icon name="hero-trash" class="size-4" /> Delete
-            </button>
+        </.form>
+      </div>
+    </div>
+
+    <%!-- Empty state --%>
+    <div :if={@qa_pairs == []} class="text-center py-16">
+      <.icon name="hero-archive-box" class="size-12 mx-auto text-base-content/20 mb-4" />
+      <p class="text-base-content/50">No Q&A pairs yet. Click "Add Q&A Pair" to get started.</p>
+    </div>
+
+    <%!-- Q&A pairs list --%>
+    <div class="space-y-3">
+      <div :for={qa <- @qa_pairs} class="card bg-base-100 shadow-sm">
+        <div class="card-body p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold">{qa.question}</h3>
+              <p class="mt-2 text-sm text-base-content/70 whitespace-pre-wrap">{qa.answer}</p>
+              <div class="flex flex-wrap gap-1.5 mt-3">
+                <span :for={tag <- qa.tags} class="badge badge-primary badge-outline badge-sm">{tag}</span>
+                <span :if={qa.source} class="badge badge-ghost badge-sm">
+                  <.icon name="hero-document-text" class="size-3" /> {qa.source}
+                </span>
+              </div>
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button class="btn btn-ghost btn-sm btn-square" phx-click="edit" phx-value-id={qa.id}>
+                <.icon name="hero-pencil-square" class="size-4" />
+              </button>
+              <button
+                class="btn btn-ghost btn-sm btn-square text-error"
+                phx-click="delete"
+                phx-value-id={qa.id}
+                data-confirm="Are you sure?"
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

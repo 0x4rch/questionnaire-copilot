@@ -18,10 +18,13 @@ defmodule QuestionnaireCopilotWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    live "/vault", VaultLive
-    live "/questionnaires", QuestionnaireLive.Index
-    live "/questionnaires/:id", QuestionnaireLive.Show
     get "/questionnaires/:id/export", ExportController, :csv
+
+    live_session :default, layout: {QuestionnaireCopilotWeb.Layouts, :app} do
+      live "/vault", VaultLive
+      live "/questionnaires", QuestionnaireLive.Index
+      live "/questionnaires/:id", QuestionnaireLive.Show
+    end
   end
 
   # Other scopes may use custom stacks.
