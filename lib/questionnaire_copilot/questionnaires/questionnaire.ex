@@ -6,6 +6,8 @@ defmodule QuestionnaireCopilot.Questionnaires.Questionnaire do
     field :name, :string
     field :status, Ecto.Enum, values: [:in_progress, :completed], default: :in_progress
 
+    field :item_count, :integer, virtual: true, default: 0
+
     has_many :items, QuestionnaireCopilot.Questionnaires.QuestionnaireItem
 
     timestamps(type: :utc_datetime)

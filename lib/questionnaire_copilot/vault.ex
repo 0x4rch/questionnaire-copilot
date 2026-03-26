@@ -159,6 +159,29 @@ defmodule QuestionnaireCopilot.Vault do
     |> Repo.exists?()
   end
 
+  def to_csv do
+    header = "question,answer,tags,source\r\n"
+
+    rows =
+      list_qa_pairs()
+      |> Enum.map(fn qa ->
+        [qa.question, qa.answer, Enum.join(qa.tags, ";"), qa.source || ""]
+        |> Enum.map(&csv_escape/1)
+        |> Enum.join(",")
+      end)
+      |> Enum.join("\r\n")
+
+    header <> rows
+  end
+
+  defp csv_escape(value) do
+    if String.contains?(value, [",", "\"", "\n"]) do
+      "\"" <> String.replace(value, "\"", "\"\"") <> "\""
+    else
+      value
+    end
+  end
+
   def all_tags do
     from(q in QAPair, select: q.tags)
     |> Repo.all()

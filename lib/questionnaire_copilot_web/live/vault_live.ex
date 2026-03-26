@@ -175,6 +175,9 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
       <:subtitle>Your library of approved security questionnaire answers</:subtitle>
       <:actions>
         <div class="flex gap-2">
+          <a href={~p"/vault/export"} class="btn btn-ghost btn-sm">
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Export
+          </a>
           <button class="btn btn-ghost btn-sm" phx-click="toggle-import">
             <.icon name="hero-arrow-up-tray" class="size-4" /> Import CSV
           </button>

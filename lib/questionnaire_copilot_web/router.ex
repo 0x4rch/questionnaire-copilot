@@ -17,10 +17,11 @@ defmodule QuestionnaireCopilotWeb.Router do
   scope "/", QuestionnaireCopilotWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
     get "/questionnaires/:id/export", ExportController, :csv
+    get "/vault/export", ExportController, :vault_csv
 
     live_session :default, layout: {QuestionnaireCopilotWeb.Layouts, :app} do
+      live "/", DashboardLive
       live "/vault", VaultLive
       live "/questionnaires", QuestionnaireLive.Index
       live "/questionnaires/:id", QuestionnaireLive.Show

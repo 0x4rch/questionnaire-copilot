@@ -211,6 +211,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
               ]}>
                 {if q.status == :in_progress, do: "In Progress", else: "Completed"}
               </span>
+              <span class="text-xs text-base-content/40">{q.item_count} questions</span>
             </div>
           </div>
           <div class="flex gap-2 shrink-0">

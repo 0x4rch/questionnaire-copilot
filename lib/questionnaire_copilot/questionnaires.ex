@@ -10,7 +10,13 @@ defmodule QuestionnaireCopilot.Questionnaires do
   # Questionnaires
 
   def list_questionnaires do
-    Repo.all(from q in Questionnaire, order_by: [desc: q.inserted_at])
+    from(q in Questionnaire,
+      left_join: i in assoc(q, :items),
+      group_by: q.id,
+      select_merge: %{item_count: count(i.id)},
+      order_by: [desc: q.inserted_at]
+    )
+    |> Repo.all()
   end
 
   def get_questionnaire!(id) do

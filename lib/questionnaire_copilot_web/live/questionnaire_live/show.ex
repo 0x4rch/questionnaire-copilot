@@ -113,6 +113,22 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     end
   end
 
+  # Copy all Q&A to clipboard
+  def handle_event("copy-all", _, socket) do
+    text =
+      socket.assigns.items
+      |> Enum.filter(&(&1.status == :answered))
+      |> Enum.map(fn item ->
+        "Q: #{item.original_question}\nA: #{item.final_answer || ""}"
+      end)
+      |> Enum.join("\n\n")
+
+    {:noreply,
+     socket
+     |> push_event("clipboard:copy", %{text: text})
+     |> put_flash(:info, "Copied to clipboard.")}
+  end
+
   # Dismiss and advance without saving
   def handle_event("dismiss-vault-prompt", _, socket) do
     {:noreply,
@@ -222,6 +238,9 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
           </p>
         </div>
         <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" phx-click="copy-all" id="copy-btn" phx-hook="Clipboard">
+            <.icon name="hero-clipboard-document" class="size-4" /> Copy All
+          </button>
           <a href={~p"/questionnaires/#{@questionnaire.id}/export"} class="btn btn-ghost btn-sm">
             <.icon name="hero-arrow-down-tray" class="size-4" /> Export
           </a>
