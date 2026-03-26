@@ -9,19 +9,46 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
      socket
      |> assign(:questionnaires, Questionnaires.list_questionnaires())
      |> assign(:form, to_form(Questionnaires.change_questionnaire(%Questionnaire{})))
-     |> assign(:creating, false)}
+     |> assign(:creating, false)
+     |> assign(:input_mode, :text)
+     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1)}
   end
 
   def handle_event("toggle-form", _, socket) do
-    {:noreply, assign(socket, :creating, !socket.assigns.creating)}
+    {:noreply,
+     socket
+     |> assign(:creating, !socket.assigns.creating)
+     |> assign(:input_mode, :text)}
   end
+
+  def handle_event("set-mode", %{"mode" => mode}, socket) do
+    {:noreply, assign(socket, :input_mode, String.to_existing_atom(mode))}
+  end
+
+  def handle_event("validate-upload", _, socket), do: {:noreply, socket}
 
   def handle_event("create", %{"questionnaire" => params}, socket) do
     {questions_text, params} = Map.pop(params, "questions_text", "")
 
+    # If CSV mode, read the uploaded file
+    csv_questions =
+      if socket.assigns.input_mode == :csv do
+        consume_uploaded_entries(socket, :csv, fn %{path: path}, _entry ->
+          {:ok, File.read!(path)}
+        end)
+        |> List.first()
+        |> parse_questions_csv()
+      else
+        nil
+      end
+
     case Questionnaires.create_questionnaire(params) do
       {:ok, questionnaire} ->
-        Questionnaires.create_items_from_text(questionnaire, questions_text)
+        if csv_questions do
+          Questionnaires.create_items_from_list(questionnaire, csv_questions)
+        else
+          Questionnaires.create_items_from_text(questionnaire, questions_text)
+        end
 
         {:noreply,
          socket
@@ -44,6 +71,49 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
      |> put_flash(:info, "Questionnaire deleted.")}
   end
 
+  # Parse CSV — expects a "question" column, ignores others
+  defp parse_questions_csv(nil), do: []
+
+  defp parse_questions_csv(csv_string) do
+    lines =
+      csv_string
+      |> String.split("\n")
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+
+    case lines do
+      [] -> []
+      [header | rows] ->
+        columns = header |> String.downcase() |> String.split(",") |> Enum.map(&String.trim/1)
+        q_index = Enum.find_index(columns, &(&1 == "question"))
+
+        if q_index do
+          Enum.map(rows, fn row ->
+            row
+            |> parse_csv_row()
+            |> Enum.at(q_index, "")
+            |> String.trim()
+          end)
+          |> Enum.reject(&(&1 == ""))
+        else
+          # No header match — treat each row as a question
+          rows
+        end
+    end
+  end
+
+  defp parse_csv_row(row) do
+    ~r/,(?=(?:[^"]*"[^"]*")*[^"]*$)/
+    |> Regex.split(row)
+    |> Enum.map(fn field ->
+      field |> String.trim() |> String.trim("\"") |> String.replace("\"\"", "\"")
+    end)
+  end
+
+  defp error_to_string(:too_large), do: "File is too large"
+  defp error_to_string(:not_accepted), do: "Use a .csv file"
+  defp error_to_string(:too_many_files), do: "Only one file"
+
   def render(assigns) do
     ~H"""
     <.header>
@@ -60,19 +130,57 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
     <div :if={@creating} class="card bg-base-100 shadow-sm mb-6">
       <div class="card-body">
         <h2 class="card-title text-base">New Questionnaire</h2>
-        <.form for={@form} phx-submit="create" class="space-y-2">
+        <.form for={@form} phx-submit="create" phx-change="validate-upload" class="space-y-2">
           <.input field={@form[:name]} type="text" label="Name" placeholder="e.g. Acme Corp Security Assessment Q1 2025" required />
-          <div class="fieldset mb-2">
+
+          <%!-- Tab toggle --%>
+          <div class="tabs tabs-boxed w-fit">
+            <button type="button" class={["tab", @input_mode == :text && "tab-active"]} phx-click="set-mode" phx-value-mode="text">
+              Paste Text
+            </button>
+            <button type="button" class={["tab", @input_mode == :csv && "tab-active"]} phx-click="set-mode" phx-value-mode="csv">
+              Upload CSV
+            </button>
+          </div>
+
+          <%!-- Text input --%>
+          <div :if={@input_mode == :text} class="fieldset mb-2">
             <label>
               <span class="label mb-1">Questions (one per line)</span>
               <textarea
                 name="questionnaire[questions_text]"
                 class="textarea textarea-bordered w-full h-48 font-mono text-sm"
                 placeholder="Do you encrypt data at rest?&#10;How do you handle incident response?&#10;What is your password policy?"
-                required
               ></textarea>
             </label>
           </div>
+
+          <%!-- CSV upload --%>
+          <div :if={@input_mode == :csv}>
+            <span class="label mb-1">CSV file with a "question" column</span>
+            <div
+              class="border-2 border-dashed border-base-300 rounded-lg p-8 text-center hover:border-primary transition-colors"
+              phx-drop-target={@uploads.csv.ref}
+            >
+              <div :if={@uploads.csv.entries == []}>
+                <.icon name="hero-arrow-up-tray" class="size-8 mx-auto text-base-content/30 mb-3" />
+                <p class="text-base-content/50 mb-2">Drag & drop a CSV file, or</p>
+                <label for={@uploads.csv.ref} class="btn btn-sm btn-outline cursor-pointer">
+                  Browse files
+                </label>
+              </div>
+              <div :for={entry <- @uploads.csv.entries} class="flex items-center justify-center gap-3">
+                <.icon name="hero-document-text" class="size-6 text-primary" />
+                <span class="font-medium">{entry.client_name}</span>
+                <span class="text-sm text-base-content/50">({Float.round(entry.client_size / 1024, 1)} KB)</span>
+                <span :for={err <- upload_errors(@uploads.csv, entry)} class="badge badge-error badge-sm">
+                  {error_to_string(err)}
+                </span>
+              </div>
+              <.live_file_input upload={@uploads.csv} class="hidden" />
+            </div>
+          </div>
+
           <div class="flex justify-end gap-2 pt-2">
             <button type="button" class="btn btn-ghost" phx-click="toggle-form">Cancel</button>
             <button type="submit" class="btn btn-primary">Create</button>

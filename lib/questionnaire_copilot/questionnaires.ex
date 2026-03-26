@@ -61,6 +61,26 @@ defmodule QuestionnaireCopilot.Questionnaires do
     Repo.insert_all(QuestionnaireItem, items)
   end
 
+  def create_items_from_list(questionnaire, questions) when is_list(questions) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    items =
+      questions
+      |> Enum.with_index(1)
+      |> Enum.map(fn {question, position} ->
+        %{
+          original_question: question,
+          position: position,
+          status: :unmatched,
+          questionnaire_id: questionnaire.id,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    Repo.insert_all(QuestionnaireItem, items)
+  end
+
   def get_item!(id) do
     QuestionnaireItem
     |> Repo.get!(id)

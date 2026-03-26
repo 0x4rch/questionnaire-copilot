@@ -1,0 +1,9 @@
+question,category
+Do you have a formal information security policy?,governance
+How do you classify and handle sensitive data?,data-protection
+Are background checks performed on employees with access to sensitive data?,hr
+Do you use a web application firewall (WAF)?,network-security
+How do you ensure secure software development practices?,development
+What is your process for decommissioning hardware and data?,data-retention
+Do you have a formal risk assessment process?,governance
+How do you secure remote access for employees?,network-security
