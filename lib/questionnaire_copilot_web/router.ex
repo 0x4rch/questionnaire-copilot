@@ -18,6 +18,9 @@ defmodule QuestionnaireCopilotWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/vault", VaultLive
+    live "/questionnaires", QuestionnaireLive.Index
+    live "/questionnaires/:id", QuestionnaireLive.Show
   end
 
   # Other scopes may use custom stacks.
