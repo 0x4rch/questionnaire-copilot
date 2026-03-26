@@ -11,7 +11,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
      |> assign(:form, to_form(Questionnaires.change_questionnaire(%Questionnaire{})))
      |> assign(:creating, false)
      |> assign(:input_mode, :text)
-     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1)}
+     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1, max_file_size: 10_000_000)}
   end
 
   def handle_event("toggle-form", _, socket) do
@@ -103,12 +103,18 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
   end
 
   defp parse_csv_row(row) do
-    ~r/,(?=(?:[^"]*"[^"]*")*[^"]*$)/
-    |> Regex.split(row)
-    |> Enum.map(fn field ->
-      field |> String.trim() |> String.trim("\"") |> String.replace("\"\"", "\"")
-    end)
+    row
+    |> String.graphemes()
+    |> parse_fields([], "", false)
+    |> Enum.reverse()
   end
+
+  defp parse_fields([], acc, current, _in_quotes), do: [String.trim(current) | acc]
+  defp parse_fields(["\"" | rest], acc, current, false), do: parse_fields(rest, acc, current, true)
+  defp parse_fields(["\"", "\"" | rest], acc, current, true), do: parse_fields(rest, acc, current <> "\"", true)
+  defp parse_fields(["\"" | rest], acc, current, true), do: parse_fields(rest, acc, current, false)
+  defp parse_fields(["," | rest], acc, current, false), do: parse_fields(rest, [String.trim(current) | acc], "", false)
+  defp parse_fields([char | rest], acc, current, in_quotes), do: parse_fields(rest, acc, current <> char, in_quotes)
 
   defp error_to_string(:too_large), do: "File is too large"
   defp error_to_string(:not_accepted), do: "Use a .csv file"

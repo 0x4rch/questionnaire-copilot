@@ -120,17 +120,36 @@ defmodule QuestionnaireCopilot.Vault do
     Repo.exists?(from q in QAPair, where: q.question == ^question)
   end
 
-  # Simple CSV row parser that handles quoted fields
+  # CSV row parser using a simple state machine (no regex, no ReDoS risk)
   defp parse_csv_row(row) do
-    # Regex splits on commas not inside quotes
-    ~r/,(?=(?:[^"]*"[^"]*")*[^"]*$)/
-    |> Regex.split(row)
-    |> Enum.map(fn field ->
-      field
-      |> String.trim()
-      |> String.trim("\"")
-      |> String.replace("\"\"", "\"")
-    end)
+    row
+    |> String.graphemes()
+    |> parse_fields([], "", false)
+    |> Enum.reverse()
+  end
+
+  defp parse_fields([], acc, current, _in_quotes) do
+    [String.trim(current) | acc]
+  end
+
+  defp parse_fields(["\"" | rest], acc, current, false) do
+    parse_fields(rest, acc, current, true)
+  end
+
+  defp parse_fields(["\"", "\"" | rest], acc, current, true) do
+    parse_fields(rest, acc, current <> "\"", true)
+  end
+
+  defp parse_fields(["\"" | rest], acc, current, true) do
+    parse_fields(rest, acc, current, false)
+  end
+
+  defp parse_fields(["," | rest], acc, current, false) do
+    parse_fields(rest, [String.trim(current) | acc], "", false)
+  end
+
+  defp parse_fields([char | rest], acc, current, in_quotes) do
+    parse_fields(rest, acc, current <> char, in_quotes)
   end
 
   def filter_by_tag(tag) when is_binary(tag) and tag != "" do

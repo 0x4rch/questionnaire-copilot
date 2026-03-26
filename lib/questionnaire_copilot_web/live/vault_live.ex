@@ -17,7 +17,7 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
      |> assign(:form, to_form(Vault.change_qa_pair(%QAPair{})))
      |> assign(:editing, nil)
      |> assign(:importing, false)
-     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1)}
+     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1, max_file_size: 10_000_000)}
   end
 
   # Handle search input — "phx-change" on the search form triggers this.
