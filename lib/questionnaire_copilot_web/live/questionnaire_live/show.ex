@@ -90,7 +90,11 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      |> assign(:editing_answer, false)}
   end
 
-  # Keyboard navigation
+  # Keyboard navigation — disabled while editing an answer
+  def handle_event("keydown", _params, %{assigns: %{editing_answer: true}} = socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("keydown", %{"key" => "j"}, socket) do
     next = min(socket.assigns.current_index + 1, length(socket.assigns.items) - 1)
 
@@ -213,7 +217,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
                 <form phx-submit="save-answer">
                   <textarea
                     name="answer"
-                    class="textarea textarea-bordered w-full h-32"
+                    class="textarea textarea-bordered w-full h-32 focus:outline-none focus:border-primary"
                     placeholder="Type your answer..."
                   >{@manual_answer}</textarea>
                   <div class="flex gap-2 mt-3 justify-end">
