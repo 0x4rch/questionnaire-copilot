@@ -125,4 +125,37 @@ defmodule QuestionnaireCopilot.Vault do
     )
     |> Repo.all()
   end
+
+  def search_and_filter(search, tags) when is_list(tags) do
+    QAPair
+    |> maybe_search(search)
+    |> maybe_filter_tags(tags)
+    |> Repo.all()
+  end
+
+  defp maybe_search(query, ""), do: query |> order_by([q], desc: q.updated_at)
+  defp maybe_search(query, nil), do: query |> order_by([q], desc: q.updated_at)
+
+  defp maybe_search(_query, search) do
+    from(q in QAPair,
+      where: fragment("similarity(?, ?) > 0.1", q.question, ^search),
+      order_by: [desc: fragment("similarity(?, ?)", q.question, ^search)]
+    )
+  end
+
+  defp maybe_filter_tags(query, []), do: query
+
+  defp maybe_filter_tags(query, tags) do
+    Enum.reduce(tags, query, fn tag, q ->
+      from(qa in q, where: ^tag in qa.tags)
+    end)
+  end
+
+  def all_tags do
+    from(q in QAPair, select: q.tags)
+    |> Repo.all()
+    |> List.flatten()
+    |> Enum.frequencies()
+    |> Enum.sort_by(fn {_tag, count} -> -count end)
+  end
 end

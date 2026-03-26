@@ -10,6 +10,9 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
     {:ok,
      socket
      |> assign(:search, "")
+     |> assign(:active_tags, [])
+     |> assign(:all_tags, Vault.all_tags())
+     |> assign(:show_all_tags, false)
      |> assign(:qa_pairs, Vault.list_qa_pairs())
      |> assign(:form, to_form(Vault.change_qa_pair(%QAPair{})))
      |> assign(:editing, nil)
@@ -23,7 +26,32 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
     {:noreply,
      socket
      |> assign(:search, query)
-     |> assign(:qa_pairs, Vault.search_qa_pairs(query))}
+     |> apply_filters()}
+  end
+
+  def handle_event("toggle-tag", %{"tag" => tag}, socket) do
+    active = socket.assigns.active_tags
+
+    active =
+      if tag in active,
+        do: List.delete(active, tag),
+        else: [tag | active]
+
+    {:noreply,
+     socket
+     |> assign(:active_tags, active)
+     |> apply_filters()}
+  end
+
+  def handle_event("clear-tags", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:active_tags, [])
+     |> apply_filters()}
+  end
+
+  def handle_event("toggle-all-tags", _, socket) do
+    {:noreply, assign(socket, :show_all_tags, !socket.assigns.show_all_tags)}
   end
 
   # Open the form to create a new Q&A pair
@@ -65,7 +93,7 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
         {:noreply,
          socket
          |> assign(:editing, nil)
-         |> assign(:qa_pairs, Vault.search_qa_pairs(socket.assigns.search))
+         |> reload()
          |> put_flash(:info, "Q&A pair saved.")}
 
       {:error, changeset} ->
@@ -109,12 +137,22 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
         {:noreply,
          socket
          |> assign(:importing, false)
-         |> assign(:qa_pairs, Vault.search_qa_pairs(socket.assigns.search))
+         |> reload()
          |> put_flash(:info, msg)}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Import failed: #{reason}")}
     end
+  end
+
+  defp apply_filters(socket) do
+    assign(socket, :qa_pairs, Vault.search_and_filter(socket.assigns.search, socket.assigns.active_tags))
+  end
+
+  defp reload(socket) do
+    socket
+    |> assign(:all_tags, Vault.all_tags())
+    |> apply_filters()
   end
 
   # Parse "encryption, access-control" into ["encryption", "access-control"]
@@ -186,7 +224,7 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
     </div>
 
     <%!-- Search bar --%>
-    <form phx-change="search" class="mb-6">
+    <form phx-change="search" class="mb-4">
       <label class="input input-bordered flex items-center gap-2 w-full">
         <.icon name="hero-magnifying-glass" class="size-4 opacity-50" />
         <input
@@ -199,6 +237,47 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
         />
       </label>
     </form>
+
+    <%!-- Tag filter bar --%>
+    <% visible_tags = if @show_all_tags, do: @all_tags, else: Enum.take(@all_tags, 8) %>
+    <% hidden_count = length(@all_tags) - 8 %>
+    <div class="flex flex-wrap gap-1.5 mb-6 items-center">
+      <button
+        :for={{tag, count} <- visible_tags}
+        class={[
+          "badge badge-sm cursor-pointer transition-colors",
+          if(tag in @active_tags,
+            do: "badge-primary",
+            else: "bg-base-300/50 text-base-content/60 hover:text-base-content border-0")
+        ]}
+        phx-click="toggle-tag"
+        phx-value-tag={tag}
+      >
+        {tag}
+        <span class="opacity-40 ml-0.5">{count}</span>
+      </button>
+      <button
+        :if={hidden_count > 0 && !@show_all_tags}
+        class="text-xs text-base-content/40 hover:text-base-content/60 cursor-pointer ml-1"
+        phx-click="toggle-all-tags"
+      >
+        +{hidden_count} more
+      </button>
+      <button
+        :if={@show_all_tags && hidden_count > 0}
+        class="text-xs text-base-content/40 hover:text-base-content/60 cursor-pointer ml-1"
+        phx-click="toggle-all-tags"
+      >
+        show less
+      </button>
+      <button
+        :if={@active_tags != []}
+        class="badge badge-sm badge-ghost cursor-pointer ml-1"
+        phx-click="clear-tags"
+      >
+        <.icon name="hero-x-mark" class="size-3" /> Clear
+      </button>
+    </div>
 
     <%!-- Add/Edit form --%>
     <div :if={@editing} class="card bg-base-100 shadow-sm mb-6">
@@ -239,7 +318,15 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
               <h3 class="font-semibold">{qa.question}</h3>
               <p class="mt-2 text-sm text-base-content/70 whitespace-pre-wrap">{qa.answer}</p>
               <div class="flex flex-wrap gap-1.5 mt-3">
-                <span :for={tag <- qa.tags} class="badge badge-primary badge-outline badge-sm">{tag}</span>
+                <span
+                  :for={tag <- qa.tags}
+                  class={[
+                    "badge badge-sm cursor-pointer transition-colors",
+                    if(tag in @active_tags, do: "badge-primary", else: "bg-base-300/50 text-base-content/60 hover:text-base-content border-0")
+                  ]}
+                  phx-click="toggle-tag"
+                  phx-value-tag={tag}
+                >{tag}</span>
                 <span :if={qa.source} class="badge badge-ghost badge-sm">
                   <.icon name="hero-document-text" class="size-3" /> {qa.source}
                 </span>
