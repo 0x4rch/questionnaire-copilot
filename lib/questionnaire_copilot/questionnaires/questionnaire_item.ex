@@ -5,7 +5,11 @@ defmodule QuestionnaireCopilot.Questionnaires.QuestionnaireItem do
   schema "questionnaire_items" do
     field :original_question, :string
     field :final_answer, :string
-    field :status, Ecto.Enum, values: [:unmatched, :matched, :answered, :skipped], default: :unmatched
+
+    field :status, Ecto.Enum,
+      values: [:unmatched, :matched, :answered, :skipped],
+      default: :unmatched
+
     field :position, :integer
 
     belongs_to :questionnaire, QuestionnaireCopilot.Questionnaires.Questionnaire

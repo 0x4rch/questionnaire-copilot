@@ -36,7 +36,10 @@ defmodule QuestionnaireCopilotWeb.DashboardLive do
 
       <%!-- Stats --%>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <.link navigate={~p"/vault"} class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+        <.link
+          navigate={~p"/vault"}
+          class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        >
           <div class="card-body p-5">
             <div class="flex items-center justify-between">
               <div>
@@ -51,7 +54,10 @@ defmodule QuestionnaireCopilotWeb.DashboardLive do
           </div>
         </.link>
 
-        <.link navigate={~p"/questionnaires"} class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+        <.link
+          navigate={~p"/questionnaires"}
+          class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        >
           <div class="card-body p-5">
             <div class="flex items-center justify-between">
               <div>

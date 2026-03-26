@@ -68,7 +68,13 @@ defmodule QuestionnaireCopilotWeb.VaultLiveTest do
     end
 
     test "filters by tag", %{conn: conn} do
-      {:ok, _} = Vault.create_qa_pair(%{question: "Auth question?", answer: "Auth answer.", tags: ["auth"]})
+      {:ok, _} =
+        Vault.create_qa_pair(%{
+          question: "Auth question?",
+          answer: "Auth answer.",
+          tags: ["auth"]
+        })
+
       {:ok, view, _html} = live(conn, ~p"/vault")
 
       view |> element("button[phx-value-tag=auth]") |> render_click()

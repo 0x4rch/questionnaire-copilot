@@ -10,7 +10,8 @@ defmodule QuestionnaireCopilot.Application do
     children = [
       QuestionnaireCopilotWeb.Telemetry,
       QuestionnaireCopilot.Repo,
-      {DNSCluster, query: Application.get_env(:questionnaire_copilot, :dns_cluster_query) || :ignore},
+      {DNSCluster,
+       query: Application.get_env(:questionnaire_copilot, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: QuestionnaireCopilot.PubSub},
       # Start a worker by calling: QuestionnaireCopilot.Worker.start_link(arg)
       # {QuestionnaireCopilot.Worker, arg},

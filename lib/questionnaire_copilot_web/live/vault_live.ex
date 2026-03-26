@@ -146,7 +146,11 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
   end
 
   defp apply_filters(socket) do
-    assign(socket, :qa_pairs, Vault.search_and_filter(socket.assigns.search, socket.assigns.active_tags))
+    assign(
+      socket,
+      :qa_pairs,
+      Vault.search_and_filter(socket.assigns.search, socket.assigns.active_tags)
+    )
   end
 
   defp reload(socket) do
@@ -196,9 +200,16 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
           CSV should have columns: <code>question, answer, tags, source</code>.
           Tags should be semicolon-separated (e.g. <code>encryption;access-control</code>).
         </p>
-        <form id="import-form" phx-submit="import" phx-change="validate-import" phx-drop-target={@uploads.csv.ref}>
-          <div class="border-2 border-dashed border-base-300 rounded-lg p-10 text-center hover:border-primary transition-colors cursor-pointer"
-               phx-drop-target={@uploads.csv.ref}>
+        <form
+          id="import-form"
+          phx-submit="import"
+          phx-change="validate-import"
+          phx-drop-target={@uploads.csv.ref}
+        >
+          <div
+            class="border-2 border-dashed border-base-300 rounded-lg p-10 text-center hover:border-primary transition-colors cursor-pointer"
+            phx-drop-target={@uploads.csv.ref}
+          >
             <div :if={@uploads.csv.entries == []}>
               <.icon name="hero-arrow-up-tray" class="size-8 mx-auto text-base-content/30 mb-3" />
               <p class="text-base-content/50 mb-2">Drag & drop a CSV file here, or</p>
@@ -209,8 +220,13 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
             <div :for={entry <- @uploads.csv.entries} class="flex items-center justify-center gap-3">
               <.icon name="hero-document-text" class="size-6 text-primary" />
               <span class="font-medium">{entry.client_name}</span>
-              <span class="text-sm text-base-content/50">({Float.round(entry.client_size / 1024, 1)} KB)</span>
-              <span :for={err <- upload_errors(@uploads.csv, entry)} class="badge badge-error badge-sm">
+              <span class="text-sm text-base-content/50">
+                ({Float.round(entry.client_size / 1024, 1)} KB)
+              </span>
+              <span
+                :for={err <- upload_errors(@uploads.csv, entry)}
+                class="badge badge-error badge-sm"
+              >
                 {error_to_string(err)}
               </span>
             </div>
@@ -251,7 +267,8 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
           "badge badge-sm cursor-pointer transition-colors",
           if(tag in @active_tags,
             do: "badge-primary",
-            else: "bg-base-300/50 text-base-content/60 hover:text-base-content border-0")
+            else: "bg-base-300/50 text-base-content/60 hover:text-base-content border-0"
+          )
         ]}
         phx-click="toggle-tag"
         phx-value-tag={tag}
@@ -325,11 +342,16 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
                   :for={tag <- qa.tags}
                   class={[
                     "badge badge-sm cursor-pointer transition-colors",
-                    if(tag in @active_tags, do: "badge-primary", else: "bg-base-300/50 text-base-content/60 hover:text-base-content border-0")
+                    if(tag in @active_tags,
+                      do: "badge-primary",
+                      else: "bg-base-300/50 text-base-content/60 hover:text-base-content border-0"
+                    )
                   ]}
                   phx-click="toggle-tag"
                   phx-value-tag={tag}
-                >{tag}</span>
+                >
+                  {tag}
+                </span>
                 <span :if={qa.source} class="badge badge-ghost badge-sm">
                   <.icon name="hero-document-text" class="size-3" /> {qa.source}
                 </span>

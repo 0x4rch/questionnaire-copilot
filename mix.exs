@@ -82,7 +82,11 @@ defmodule QuestionnaireCopilot.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind questionnaire_copilot", "esbuild questionnaire_copilot"],
+      "assets.build": [
+        "compile",
+        "tailwind questionnaire_copilot",
+        "esbuild questionnaire_copilot"
+      ],
       "assets.deploy": [
         "tailwind questionnaire_copilot --minify",
         "esbuild questionnaire_copilot --minify",

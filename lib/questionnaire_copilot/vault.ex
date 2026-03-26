@@ -87,9 +87,17 @@ defmodule QuestionnaireCopilot.Vault do
               [question, answer | rest] ->
                 tags =
                   case Enum.at(rest, 0) do
-                    nil -> []
-                    "" -> []
-                    t -> t |> String.split(";") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+                    nil ->
+                      []
+
+                    "" ->
+                      []
+
+                    t ->
+                      t
+                      |> String.split(";")
+                      |> Enum.map(&String.trim/1)
+                      |> Enum.reject(&(&1 == ""))
                   end
 
                 source = Enum.at(rest, 1)

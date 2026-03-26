@@ -82,7 +82,9 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
       |> Enum.reject(&(&1 == ""))
 
     case lines do
-      [] -> []
+      [] ->
+        []
+
       [header | rows] ->
         columns = header |> String.downcase() |> String.split(",") |> Enum.map(&String.trim/1)
         q_index = Enum.find_index(columns, &(&1 == "question"))
@@ -110,11 +112,21 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
   end
 
   defp parse_fields([], acc, current, _in_quotes), do: [String.trim(current) | acc]
-  defp parse_fields(["\"" | rest], acc, current, false), do: parse_fields(rest, acc, current, true)
-  defp parse_fields(["\"", "\"" | rest], acc, current, true), do: parse_fields(rest, acc, current <> "\"", true)
-  defp parse_fields(["\"" | rest], acc, current, true), do: parse_fields(rest, acc, current, false)
-  defp parse_fields(["," | rest], acc, current, false), do: parse_fields(rest, [String.trim(current) | acc], "", false)
-  defp parse_fields([char | rest], acc, current, in_quotes), do: parse_fields(rest, acc, current <> char, in_quotes)
+
+  defp parse_fields(["\"" | rest], acc, current, false),
+    do: parse_fields(rest, acc, current, true)
+
+  defp parse_fields(["\"", "\"" | rest], acc, current, true),
+    do: parse_fields(rest, acc, current <> "\"", true)
+
+  defp parse_fields(["\"" | rest], acc, current, true),
+    do: parse_fields(rest, acc, current, false)
+
+  defp parse_fields(["," | rest], acc, current, false),
+    do: parse_fields(rest, [String.trim(current) | acc], "", false)
+
+  defp parse_fields([char | rest], acc, current, in_quotes),
+    do: parse_fields(rest, acc, current <> char, in_quotes)
 
   defp error_to_string(:too_large), do: "File is too large"
   defp error_to_string(:not_accepted), do: "Use a .csv file"
@@ -137,14 +149,30 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
       <div class="card-body">
         <h2 class="card-title text-base">New Questionnaire</h2>
         <.form for={@form} phx-submit="create" phx-change="validate-upload" class="space-y-2">
-          <.input field={@form[:name]} type="text" label="Name" placeholder="e.g. Acme Corp Security Assessment Q1 2025" required />
+          <.input
+            field={@form[:name]}
+            type="text"
+            label="Name"
+            placeholder="e.g. Acme Corp Security Assessment Q1 2025"
+            required
+          />
 
           <%!-- Tab toggle --%>
           <div class="tabs tabs-boxed w-fit">
-            <button type="button" class={["tab", @input_mode == :text && "tab-active"]} phx-click="set-mode" phx-value-mode="text">
+            <button
+              type="button"
+              class={["tab", @input_mode == :text && "tab-active"]}
+              phx-click="set-mode"
+              phx-value-mode="text"
+            >
               Paste Text
             </button>
-            <button type="button" class={["tab", @input_mode == :csv && "tab-active"]} phx-click="set-mode" phx-value-mode="csv">
+            <button
+              type="button"
+              class={["tab", @input_mode == :csv && "tab-active"]}
+              phx-click="set-mode"
+              phx-value-mode="csv"
+            >
               Upload CSV
             </button>
           </div>
@@ -178,8 +206,13 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
               <div :for={entry <- @uploads.csv.entries} class="flex items-center justify-center gap-3">
                 <.icon name="hero-document-text" class="size-6 text-primary" />
                 <span class="font-medium">{entry.client_name}</span>
-                <span class="text-sm text-base-content/50">({Float.round(entry.client_size / 1024, 1)} KB)</span>
-                <span :for={err <- upload_errors(@uploads.csv, entry)} class="badge badge-error badge-sm">
+                <span class="text-sm text-base-content/50">
+                  ({Float.round(entry.client_size / 1024, 1)} KB)
+                </span>
+                <span
+                  :for={err <- upload_errors(@uploads.csv, entry)}
+                  class="badge badge-error badge-sm"
+                >
                   {error_to_string(err)}
                 </span>
               </div>
@@ -198,7 +231,9 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
     <%!-- Empty state --%>
     <div :if={@questionnaires == []} class="text-center py-16">
       <.icon name="hero-clipboard-document-list" class="size-12 mx-auto text-base-content/20 mb-4" />
-      <p class="text-base-content/50">No questionnaires yet. Click "New Questionnaire" to import one.</p>
+      <p class="text-base-content/50">
+        No questionnaires yet. Click "New Questionnaire" to import one.
+      </p>
     </div>
 
     <%!-- Questionnaire list --%>

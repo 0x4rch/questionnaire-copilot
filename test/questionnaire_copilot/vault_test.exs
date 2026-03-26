@@ -4,7 +4,12 @@ defmodule QuestionnaireCopilot.VaultTest do
   alias QuestionnaireCopilot.Vault
   alias QuestionnaireCopilot.Vault.QAPair
 
-  @valid_attrs %{question: "Do you encrypt data at rest?", answer: "Yes, AES-256.", tags: ["encryption"], source: "SOC2"}
+  @valid_attrs %{
+    question: "Do you encrypt data at rest?",
+    answer: "Yes, AES-256.",
+    tags: ["encryption"],
+    source: "SOC2"
+  }
   @update_attrs %{answer: "Yes, AES-256 with AWS KMS."}
 
   describe "qa_pairs" do

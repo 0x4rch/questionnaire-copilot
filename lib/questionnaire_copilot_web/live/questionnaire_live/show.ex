@@ -102,7 +102,12 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
   def handle_event("save-to-vault", _, socket) do
     case socket.assigns.vault_prompt do
       %{question: q, answer: a} ->
-        Vault.create_qa_pair(%{question: q, answer: a, tags: [], source: socket.assigns.questionnaire.name})
+        Vault.create_qa_pair(%{
+          question: q,
+          answer: a,
+          tags: [],
+          source: socket.assigns.questionnaire.name
+        })
 
         {:noreply,
          socket
@@ -283,18 +288,25 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
               <%!-- Existing answer --%>
               <div :if={@current.final_answer} class="mt-4 p-4 bg-base-200 rounded-lg">
-                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/40 mb-2">Current Answer</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-base-content/40 mb-2">
+                  Current Answer
+                </p>
                 <p class="whitespace-pre-wrap text-sm">{@current.final_answer}</p>
               </div>
 
               <%!-- Save to vault prompt --%>
-              <div :if={@vault_prompt} class="mt-4 p-4 bg-base-200 rounded-lg flex items-center justify-between">
+              <div
+                :if={@vault_prompt}
+                class="mt-4 p-4 bg-base-200 rounded-lg flex items-center justify-between"
+              >
                 <div class="flex items-center gap-2">
                   <.icon name="hero-archive-box" class="size-4 text-primary" />
                   <p class="font-medium text-sm">Save this to your vault?</p>
                 </div>
                 <div class="flex gap-2">
-                  <button class="btn btn-ghost btn-sm" phx-click="dismiss-vault-prompt">No thanks</button>
+                  <button class="btn btn-ghost btn-sm" phx-click="dismiss-vault-prompt">
+                    No thanks
+                  </button>
                   <button class="btn btn-primary btn-sm" phx-click="save-to-vault">
                     <.icon name="hero-plus" class="size-3" /> Save to Vault
                   </button>
@@ -310,7 +322,12 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
                     placeholder="Type your answer..."
                   >{@manual_answer}</textarea>
                   <div class="flex gap-2 mt-3 justify-end">
-                    <button type="button" class="btn btn-sm btn-ghost" phx-click="goto" phx-value-index={@current_index}>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-ghost"
+                      phx-click="goto"
+                      phx-value-index={@current_index}
+                    >
                       Cancel
                     </button>
                     <button type="submit" class="btn btn-sm btn-primary">Save Answer</button>
@@ -325,8 +342,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
                 </button>
                 <div class="flex-1" />
                 <button class="btn btn-sm btn-ghost" phx-click="skip">
-                  Skip
-                  <kbd class="kbd kbd-xs ml-1">s</kbd>
+                  Skip <kbd class="kbd kbd-xs ml-1">s</kbd>
                 </button>
               </div>
             </div>
@@ -353,7 +369,8 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
             <p class="text-xs text-base-content/30 mt-2">
               <kbd class="kbd kbd-xs">j</kbd>/<kbd class="kbd kbd-xs">k</kbd> navigate
               <span class="mx-1">&middot;</span>
-              <kbd class="kbd kbd-xs">s</kbd> skip
+              <kbd class="kbd kbd-xs">s</kbd>
+              skip
             </p>
           </div>
         </div>
@@ -383,29 +400,42 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
           <div :if={display_results == []} class="card bg-base-100 shadow-sm p-8 text-center">
             <.icon name="hero-magnifying-glass" class="size-8 mx-auto text-base-content/20 mb-2" />
             <p class="text-sm text-base-content/40">
-              {if @vault_search != "", do: "No results for \"#{@vault_search}\"", else: "No matches found in vault"}
+              {if @vault_search != "",
+                do: "No results for \"#{@vault_search}\"",
+                else: "No matches found in vault"}
             </p>
           </div>
           <div class="space-y-3">
             <div :for={match <- Enum.take(display_results, 5)} class="card bg-base-100 shadow-sm">
               <div class="card-body p-4">
                 <p class="font-medium text-sm">{match.question}</p>
-                <p class="text-xs text-base-content/60 whitespace-pre-wrap mt-1.5 line-clamp-4">{match.answer}</p>
+                <p class="text-xs text-base-content/60 whitespace-pre-wrap mt-1.5 line-clamp-4">
+                  {match.answer}
+                </p>
                 <div :if={match.tags != []} class="flex flex-wrap gap-1 mt-2">
-                  <span :for={tag <- match.tags} class="badge badge-primary badge-outline badge-xs">{tag}</span>
+                  <span :for={tag <- match.tags} class="badge badge-primary badge-outline badge-xs">
+                    {tag}
+                  </span>
                 </div>
                 <div class="flex gap-2 mt-3">
-                  <button class="btn btn-xs btn-primary flex-1" phx-click="accept" phx-value-qa-id={match.id}>
+                  <button
+                    class="btn btn-xs btn-primary flex-1"
+                    phx-click="accept"
+                    phx-value-qa-id={match.id}
+                  >
                     Accept
                   </button>
-                  <button class="btn btn-xs btn-ghost flex-1" phx-click="accept-edit" phx-value-qa-id={match.id}>
+                  <button
+                    class="btn btn-xs btn-ghost flex-1"
+                    phx-click="accept-edit"
+                    phx-value-qa-id={match.id}
+                  >
                     Accept & Edit
                   </button>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
 

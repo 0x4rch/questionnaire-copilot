@@ -8,7 +8,12 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLiveTest do
 
   defp create_questionnaire_with_items(_) do
     {:ok, q} = Questionnaires.create_questionnaire(%{name: "Test Assessment"})
-    Questionnaires.create_items_from_text(q, "Do you encrypt data?\nWhat is your password policy?")
+
+    Questionnaires.create_items_from_text(
+      q,
+      "Do you encrypt data?\nWhat is your password policy?"
+    )
+
     q = Questionnaires.get_questionnaire!(q.id)
     %{questionnaire: q}
   end
