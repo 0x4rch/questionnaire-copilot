@@ -33,11 +33,8 @@ asdf set elixir 1.19.5-otp-28
 # Start PostgreSQL
 docker compose up -d
 
-# Install dependencies
-mix deps.get
-
-# Create and migrate database
-mix ecto.setup
+# Install dependencies and set up database
+mix setup
 
 # Start Phoenix server
 mix phx.server
@@ -57,3 +54,10 @@ iex -S mix phx.server
 # Reset database
 mix ecto.reset
 ```
+
+## Learn more
+
+- Official website: https://www.phoenixframework.org/
+- Guides: https://hexdocs.pm/phoenix/overview.html
+- Docs: https://hexdocs.pm/phoenix
+- Forum: https://elixirforum.com/c/phoenix-forum
