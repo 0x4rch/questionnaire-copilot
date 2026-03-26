@@ -73,6 +73,29 @@ defmodule QuestionnaireCopilot.Questionnaires do
     |> Repo.update()
   end
 
+  def to_csv(questionnaire) do
+    header = "original_question,final_answer,status\r\n"
+
+    rows =
+      questionnaire.items
+      |> Enum.map(fn item ->
+        [item.original_question, item.final_answer || "", to_string(item.status)]
+        |> Enum.map(&csv_escape/1)
+        |> Enum.join(",")
+      end)
+      |> Enum.join("\r\n")
+
+    header <> rows
+  end
+
+  defp csv_escape(value) do
+    if String.contains?(value, [",", "\"", "\n"]) do
+      "\"" <> String.replace(value, "\"", "\"\"") <> "\""
+    else
+      value
+    end
+  end
+
   def progress(questionnaire) do
     items = questionnaire.items || []
     total = length(items)

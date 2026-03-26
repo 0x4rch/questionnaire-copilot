@@ -163,9 +163,14 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
           <h1 class="text-lg font-semibold">{@questionnaire.name}</h1>
           <p class="text-sm text-base-content/60">{@done}/{@total} answered</p>
         </div>
-        <.link navigate={~p"/questionnaires"} class="btn btn-ghost btn-sm">
-          <.icon name="hero-arrow-left" class="size-4" /> Back
-        </.link>
+        <div class="flex gap-2">
+          <a href={~p"/questionnaires/#{@questionnaire.id}/export"} class="btn btn-ghost btn-sm">
+            <.icon name="hero-arrow-down-tray" class="size-4" /> Export CSV
+          </a>
+          <.link navigate={~p"/questionnaires"} class="btn btn-ghost btn-sm">
+            <.icon name="hero-arrow-left" class="size-4" /> Back
+          </.link>
+        </div>
       </div>
 
       <%!-- Progress bar --%>

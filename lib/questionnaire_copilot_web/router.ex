@@ -21,6 +21,7 @@ defmodule QuestionnaireCopilotWeb.Router do
     live "/vault", VaultLive
     live "/questionnaires", QuestionnaireLive.Index
     live "/questionnaires/:id", QuestionnaireLive.Show
+    get "/questionnaires/:id/export", ExportController, :csv
   end
 
   # Other scopes may use custom stacks.
