@@ -151,6 +151,14 @@ defmodule QuestionnaireCopilot.Vault do
     end)
   end
 
+  def has_close_match?(question) when is_binary(question) do
+    from(q in QAPair,
+      where: fragment("similarity(?, ?) > 0.3", q.question, ^question),
+      limit: 1
+    )
+    |> Repo.exists?()
+  end
+
   def all_tags do
     from(q in QAPair, select: q.tags)
     |> Repo.all()

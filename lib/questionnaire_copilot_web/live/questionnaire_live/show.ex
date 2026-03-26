@@ -16,10 +16,11 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      |> assign(:current_index, current_index)
      |> assign(:matches, find_matches(items, current_index))
      |> assign(:editing_answer, false)
-     |> assign(:manual_answer, "")}
+     |> assign(:manual_answer, "")
+     |> assign(:vault_prompt, nil)}
   end
 
-  # Accept a matched answer
+  # Accept a matched answer — already in vault, no prompt needed
   def handle_event("accept", %{"qa-id" => qa_id}, socket) do
     qa_pair = Vault.get_qa_pair!(qa_id)
     item = current_item(socket)
@@ -31,7 +32,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
         status: :answered
       })
 
-    {:noreply, reload_and_advance(socket)}
+    {:noreply, reload_and_advance(socket) |> assign(:vault_prompt, nil)}
   end
 
   # Accept and open editor to tweak the answer
@@ -54,7 +55,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      |> assign(:matched_qa_pair_id, nil)}
   end
 
-  # Save the edited/manual answer
+  # Save the edited/manual answer — check if vault needs this
   def handle_event("save-answer", %{"answer" => answer}, socket) do
     item = current_item(socket)
     matched_id = socket.assigns[:matched_qa_pair_id]
@@ -66,10 +67,26 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
         status: :answered
       })
 
-    {:noreply,
-     socket
-     |> assign(:editing_answer, false)
-     |> reload_and_advance()}
+    # If no close match in vault, stay on this question and prompt
+    if !Vault.has_close_match?(item.original_question) do
+      # Reload items so status updates, but stay on current index
+      questionnaire = Questionnaires.get_questionnaire!(socket.assigns.questionnaire.id)
+      {:ok, questionnaire} = Questionnaires.maybe_mark_completed(questionnaire)
+      questionnaire = Questionnaires.get_questionnaire!(questionnaire.id)
+
+      {:noreply,
+       socket
+       |> assign(:questionnaire, questionnaire)
+       |> assign(:items, questionnaire.items)
+       |> assign(:editing_answer, false)
+       |> assign(:vault_prompt, %{question: item.original_question, answer: answer})}
+    else
+      {:noreply,
+       socket
+       |> assign(:editing_answer, false)
+       |> assign(:vault_prompt, nil)
+       |> reload_and_advance()}
+    end
   end
 
   # Skip the current question
@@ -77,6 +94,31 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     item = current_item(socket)
     {:ok, _} = Questionnaires.update_item(item, %{status: :skipped})
     {:noreply, reload_and_advance(socket)}
+  end
+
+  # Save to vault, then advance
+  def handle_event("save-to-vault", _, socket) do
+    case socket.assigns.vault_prompt do
+      %{question: q, answer: a} ->
+        Vault.create_qa_pair(%{question: q, answer: a, tags: [], source: socket.assigns.questionnaire.name})
+
+        {:noreply,
+         socket
+         |> assign(:vault_prompt, nil)
+         |> reload_and_advance()
+         |> put_flash(:info, "Saved to vault.")}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # Dismiss and advance without saving
+  def handle_event("dismiss-vault-prompt", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:vault_prompt, nil)
+     |> reload_and_advance()}
   end
 
   # Navigate to a specific question by index
@@ -87,11 +129,16 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      socket
      |> assign(:current_index, index)
      |> assign(:matches, find_matches(socket.assigns.items, index))
-     |> assign(:editing_answer, false)}
+     |> assign(:editing_answer, false)
+     |> assign(:vault_prompt, nil)}
   end
 
   # Keyboard navigation — disabled while editing an answer
   def handle_event("keydown", _params, %{assigns: %{editing_answer: true}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("keydown", _params, %{assigns: %{vault_prompt: %{}}} = socket) do
     {:noreply, socket}
   end
 
@@ -186,8 +233,9 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
       <progress class="progress progress-primary w-full mb-6" value={@done} max={@total}></progress>
 
+      <% show_right_panel = @current && @current.status in [:unmatched, :matched] && !@vault_prompt %>
       <div :if={@current} class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <%!-- Left panel: current question (3/5 width) --%>
+        <%!-- Left panel --%>
         <div class="lg:col-span-3 space-y-4">
           <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
@@ -212,6 +260,20 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
                 <p class="whitespace-pre-wrap text-sm">{@current.final_answer}</p>
               </div>
 
+              <%!-- Save to vault prompt --%>
+              <div :if={@vault_prompt} class="mt-4 p-4 bg-base-200 rounded-lg flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <.icon name="hero-archive-box" class="size-4 text-primary" />
+                  <p class="font-medium text-sm">Save this to your vault?</p>
+                </div>
+                <div class="flex gap-2">
+                  <button class="btn btn-ghost btn-sm" phx-click="dismiss-vault-prompt">No thanks</button>
+                  <button class="btn btn-primary btn-sm" phx-click="save-to-vault">
+                    <.icon name="hero-plus" class="size-3" /> Save to Vault
+                  </button>
+                </div>
+              </div>
+
               <%!-- Manual answer editor --%>
               <div :if={@editing_answer} class="mt-4">
                 <form phx-submit="save-answer">
@@ -230,7 +292,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
               </div>
 
               <%!-- Action buttons --%>
-              <div :if={!@editing_answer} class="flex gap-2 mt-4">
+              <div :if={!@editing_answer && !@vault_prompt} class="flex gap-2 mt-4">
                 <button class="btn btn-sm btn-ghost" phx-click="manual">
                   <.icon name="hero-pencil" class="size-4" /> Write Answer
                 </button>
@@ -270,7 +332,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
         </div>
 
         <%!-- Right panel: suggested matches (2/5 width) --%>
-        <div :if={@current.status in [:unmatched, :matched]} class="lg:col-span-2">
+        <div :if={show_right_panel} class="lg:col-span-2">
           <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/50 mb-3">
             Suggested Matches
           </h3>
