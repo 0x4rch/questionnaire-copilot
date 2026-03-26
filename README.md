@@ -1,6 +1,14 @@
 # Questionnaire Copilot
 
+[![CI](https://github.com/0x4rch/questionnaire-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/0x4rch/questionnaire-copilot/actions/workflows/ci.yml)
+![Elixir](https://img.shields.io/badge/Elixir-1.19-4B275F?logo=elixir&logoColor=white)
+![Phoenix](https://img.shields.io/badge/Phoenix-1.8-FD4F00?logo=phoenixframework&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791?logo=postgresql&logoColor=white)
+![License](https://img.shields.io/github/license/0x4rch/questionnaire-copilot)
+
 A self-hosted Phoenix LiveView application that helps security/compliance professionals answer vendor security questionnaires faster by maintaining a searchable library of canonical Q&A pairs and matching them against incoming questionnaires.
+
+---
 
 ## Features
 
@@ -19,16 +27,18 @@ A self-hosted Phoenix LiveView application that helps security/compliance profes
 
 ## Tech Stack
 
-- Elixir 1.19+ / Erlang OTP 28+
-- Phoenix 1.8 with LiveView
-- PostgreSQL 18 with pg_trgm for fuzzy matching
-- Tailwind CSS with daisyUI
-- No JavaScript frameworks — just Phoenix LiveView
+| Component | Version |
+|-----------|---------|
+| Elixir | 1.19+ (OTP 28) |
+| Phoenix | 1.8 with LiveView |
+| PostgreSQL | 18 with pg_trgm |
+| CSS | Tailwind + daisyUI |
+| JavaScript | None (just LiveView) |
 
 ## Prerequisites
 
 - Erlang/OTP 28+
-- Elixir 1.19+ (OTP 28)
+- Elixir 1.19+
 - Docker & Docker Compose (for PostgreSQL)
 
 ### Installing Erlang & Elixir
@@ -83,6 +93,9 @@ iex -S mix phx.server
 
 # Reset database
 mix ecto.reset
+
+# Format code
+mix format
 ```
 
 ## CSV Formats
@@ -112,6 +125,14 @@ Only the `question` column is required; other columns are ignored.
 - [ ] AI answer drafting with Claude API
 - [ ] Bulk auto-processing of questionnaires
 - [ ] Authentication for multi-user deployment
+
+## Contributing
+
+1. Fork it
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -am 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
 
 ## License
 
