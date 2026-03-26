@@ -47,6 +47,77 @@ defmodule QuestionnaireCopilot.Vault do
 
   def search_qa_pairs(_), do: list_qa_pairs()
 
+  @doc """
+  Import Q&A pairs from CSV content. Expects columns: question, answer, tags, source.
+  Tags should be semicolon-separated within the field.
+  Returns {:ok, count} or {:error, reason}.
+  """
+  def import_csv(csv_string) when is_binary(csv_string) do
+    lines =
+      csv_string
+      |> String.split("\n")
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+
+    case lines do
+      [] ->
+        {:error, "CSV is empty"}
+
+      [_header | rows] ->
+        results =
+          Enum.map(rows, fn row ->
+            fields = parse_csv_row(row)
+
+            case fields do
+              [question, answer | rest] ->
+                tags =
+                  case Enum.at(rest, 0) do
+                    nil -> []
+                    "" -> []
+                    t -> t |> String.split(";") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+                  end
+
+                source = Enum.at(rest, 1)
+
+                if question_exists?(question) do
+                  {:skip, :duplicate}
+                else
+                  create_qa_pair(%{
+                    question: question,
+                    answer: answer,
+                    tags: tags,
+                    source: source
+                  })
+                end
+
+              _ ->
+                {:error, "Invalid row: #{row}"}
+            end
+          end)
+
+        imported = Enum.count(results, &match?({:ok, _}, &1))
+        skipped = Enum.count(results, &match?({:skip, _}, &1))
+        {:ok, %{imported: imported, skipped: skipped}}
+    end
+  end
+
+  defp question_exists?(question) do
+    Repo.exists?(from q in QAPair, where: q.question == ^question)
+  end
+
+  # Simple CSV row parser that handles quoted fields
+  defp parse_csv_row(row) do
+    # Regex splits on commas not inside quotes
+    ~r/,(?=(?:[^"]*"[^"]*")*[^"]*$)/
+    |> Regex.split(row)
+    |> Enum.map(fn field ->
+      field
+      |> String.trim()
+      |> String.trim("\"")
+      |> String.replace("\"\"", "\"")
+    end)
+  end
+
   def filter_by_tag(tag) when is_binary(tag) and tag != "" do
     from(q in QAPair,
       where: ^tag in q.tags,

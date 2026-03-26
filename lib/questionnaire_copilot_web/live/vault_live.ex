@@ -12,7 +12,9 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
      |> assign(:search, "")
      |> assign(:qa_pairs, Vault.list_qa_pairs())
      |> assign(:form, to_form(Vault.change_qa_pair(%QAPair{})))
-     |> assign(:editing, nil)}
+     |> assign(:editing, nil)
+     |> assign(:importing, false)
+     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1)}
   end
 
   # Handle search input — "phx-change" on the search form triggers this.
@@ -82,12 +84,49 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
      |> put_flash(:info, "Q&A pair deleted.")}
   end
 
+  # CSV Import
+  def handle_event("validate-import", _, socket), do: {:noreply, socket}
+
+  def handle_event("toggle-import", _, socket) do
+    {:noreply, assign(socket, :importing, !socket.assigns.importing)}
+  end
+
+  def handle_event("import", _, socket) do
+    [csv_content] =
+      consume_uploaded_entries(socket, :csv, fn %{path: path}, _entry ->
+        {:ok, File.read!(path)}
+      end)
+
+    case Vault.import_csv(csv_content) do
+      {:ok, %{imported: imported, skipped: skipped}} ->
+        msg =
+          case {imported, skipped} do
+            {n, 0} -> "Imported #{n} Q&A pairs."
+            {0, s} -> "No new pairs imported (#{s} duplicates skipped)."
+            {n, s} -> "Imported #{n} Q&A pairs (#{s} duplicates skipped)."
+          end
+
+        {:noreply,
+         socket
+         |> assign(:importing, false)
+         |> assign(:qa_pairs, Vault.search_qa_pairs(socket.assigns.search))
+         |> put_flash(:info, msg)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Import failed: #{reason}")}
+    end
+  end
+
   # Parse "encryption, access-control" into ["encryption", "access-control"]
   defp parse_tags(tags) when is_binary(tags) do
     tags |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
   end
 
   defp parse_tags(tags), do: tags
+
+  defp error_to_string(:too_large), do: "File is too large"
+  defp error_to_string(:not_accepted), do: "File type not accepted (use .csv)"
+  defp error_to_string(:too_many_files), do: "Only one file allowed"
 
   # The render callback — returns the HEEx template.
   # ~H is a sigil that compiles HEEx (HTML + Elixir Expressions) at compile time.
@@ -97,11 +136,54 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
       Q&A Vault
       <:subtitle>Your library of approved security questionnaire answers</:subtitle>
       <:actions>
-        <button class="btn btn-primary" phx-click="new">
-          <.icon name="hero-plus" class="size-4" /> Add Q&A Pair
-        </button>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm" phx-click="toggle-import">
+            <.icon name="hero-arrow-up-tray" class="size-4" /> Import CSV
+          </button>
+          <button class="btn btn-primary" phx-click="new">
+            <.icon name="hero-plus" class="size-4" /> Add Q&A Pair
+          </button>
+        </div>
       </:actions>
     </.header>
+
+    <%!-- CSV Import --%>
+    <div :if={@importing} class="card bg-base-100 shadow-sm mb-6">
+      <div class="card-body">
+        <h2 class="card-title text-base">Import Q&A Pairs from CSV</h2>
+        <p class="text-sm text-base-content/60 mb-2">
+          CSV should have columns: <code>question, answer, tags, source</code>.
+          Tags should be semicolon-separated (e.g. <code>encryption;access-control</code>).
+        </p>
+        <form id="import-form" phx-submit="import" phx-change="validate-import" phx-drop-target={@uploads.csv.ref}>
+          <div class="border-2 border-dashed border-base-300 rounded-lg p-10 text-center hover:border-primary transition-colors cursor-pointer"
+               phx-drop-target={@uploads.csv.ref}>
+            <div :if={@uploads.csv.entries == []}>
+              <.icon name="hero-arrow-up-tray" class="size-8 mx-auto text-base-content/30 mb-3" />
+              <p class="text-base-content/50 mb-2">Drag & drop a CSV file here, or</p>
+              <label for={@uploads.csv.ref} class="btn btn-sm btn-outline cursor-pointer">
+                Browse files
+              </label>
+            </div>
+            <div :for={entry <- @uploads.csv.entries} class="flex items-center justify-center gap-3">
+              <.icon name="hero-document-text" class="size-6 text-primary" />
+              <span class="font-medium">{entry.client_name}</span>
+              <span class="text-sm text-base-content/50">({Float.round(entry.client_size / 1024, 1)} KB)</span>
+              <span :for={err <- upload_errors(@uploads.csv, entry)} class="badge badge-error badge-sm">
+                {error_to_string(err)}
+              </span>
+            </div>
+            <.live_file_input upload={@uploads.csv} class="hidden" />
+          </div>
+          <div class="flex justify-end gap-2 mt-4">
+            <button type="button" class="btn btn-ghost" phx-click="toggle-import">Cancel</button>
+            <button type="submit" class="btn btn-primary" disabled={@uploads.csv.entries == []}>
+              <.icon name="hero-arrow-up-tray" class="size-4" /> Import
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <%!-- Search bar --%>
     <form phx-change="search" class="mb-6">
