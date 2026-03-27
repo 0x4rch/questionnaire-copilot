@@ -42,29 +42,11 @@ defmodule QuestionnaireCopilot.Questionnaires do
   # Questionnaire Items
 
   def create_items_from_text(questionnaire, text) when is_binary(text) do
-    lines =
-      text
-      |> String.split("\n")
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    items =
-      lines
-      |> Enum.with_index(1)
-      |> Enum.map(fn {question, position} ->
-        %{
-          original_question: question,
-          position: position,
-          status: :unmatched,
-          questionnaire_id: questionnaire.id,
-          inserted_at: now,
-          updated_at: now
-        }
-      end)
-
-    Repo.insert_all(QuestionnaireItem, items)
+    text
+    |> String.split("\n")
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> then(&create_items_from_list(questionnaire, &1))
   end
 
   def create_items_from_list(questionnaire, questions) when is_list(questions) do
@@ -99,11 +81,11 @@ defmodule QuestionnaireCopilot.Questionnaires do
     |> Repo.update()
   end
 
-  def to_csv(questionnaire) do
+  def to_csv(%{items: items}) when is_list(items) do
     header = "original_question,final_answer,status\r\n"
 
     rows =
-      questionnaire.items
+      items
       |> Enum.map(fn item ->
         [item.original_question, item.final_answer || "", to_string(item.status)]
         |> Enum.map(&csv_escape/1)
@@ -122,22 +104,29 @@ defmodule QuestionnaireCopilot.Questionnaires do
     end
   end
 
-  def progress(questionnaire) do
-    items = questionnaire.items || []
+  @doc """
+  Returns {done, total} counts for a questionnaire's items.
+
+  Uses pattern matching to extract preloaded items and a guard clause
+  to ensure items are loaded — will raise if called with unloaded associations.
+  """
+  def progress(%{items: items}) when is_list(items) do
     total = length(items)
     done = Enum.count(items, &(&1.status in [:answered, :skipped]))
     {done, total}
   end
 
-  def maybe_mark_completed(questionnaire) do
-    {done, total} = progress(questionnaire)
+  def maybe_mark_completed(%{status: :completed} = q), do: {:ok, q}
 
-    if total > 0 and done == total and questionnaire.status != :completed do
-      questionnaire
-      |> Questionnaire.changeset(%{status: :completed})
-      |> Repo.update()
-    else
-      {:ok, questionnaire}
+  def maybe_mark_completed(questionnaire) do
+    case progress(questionnaire) do
+      {total, total} when total > 0 ->
+        questionnaire
+        |> Questionnaire.changeset(%{status: :completed})
+        |> Repo.update()
+
+      _ ->
+        {:ok, questionnaire}
     end
   end
 end
