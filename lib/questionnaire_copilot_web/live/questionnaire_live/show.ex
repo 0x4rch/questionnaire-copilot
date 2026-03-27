@@ -219,7 +219,6 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
   defp reload_and_advance(socket) do
     questionnaire = Questionnaires.get_questionnaire!(socket.assigns.questionnaire.id)
     {:ok, questionnaire} = Questionnaires.maybe_mark_completed(questionnaire)
-    questionnaire = Questionnaires.get_questionnaire!(questionnaire.id)
     items = questionnaire.items
     next_index = find_first_unanswered(items)
 

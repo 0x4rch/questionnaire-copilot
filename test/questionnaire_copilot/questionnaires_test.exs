@@ -135,6 +135,29 @@ defmodule QuestionnaireCopilot.QuestionnairesTest do
       assert updated.status == :completed
     end
 
+    test "no-ops when questionnaire is already completed" do
+      q = create_questionnaire()
+      Questionnaires.create_items_from_text(q, "Q1?")
+      loaded = Questionnaires.get_questionnaire!(q.id)
+      Questionnaires.update_item(hd(loaded.items), %{status: :answered, final_answer: "A."})
+      loaded = Questionnaires.get_questionnaire!(q.id)
+
+      {:ok, completed} = Questionnaires.maybe_mark_completed(loaded)
+      assert completed.status == :completed
+
+      {:ok, again} = Questionnaires.maybe_mark_completed(completed)
+      assert again.status == :completed
+      assert again.id == completed.id
+    end
+
+    test "does not mark completed when questionnaire has no items" do
+      q = create_questionnaire()
+      loaded = Questionnaires.get_questionnaire!(q.id)
+
+      {:ok, unchanged} = Questionnaires.maybe_mark_completed(loaded)
+      assert unchanged.status == :in_progress
+    end
+
     test "does not mark completed when items remain" do
       q = create_questionnaire()
       Questionnaires.create_items_from_text(q, "Q1?\nQ2?")

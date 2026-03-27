@@ -122,22 +122,29 @@ defmodule QuestionnaireCopilot.Questionnaires do
     end
   end
 
-  def progress(questionnaire) do
-    items = questionnaire.items || []
+  @doc """
+  Returns {done, total} counts for a questionnaire's items.
+
+  Uses pattern matching to extract preloaded items and a guard clause
+  to ensure items are loaded — will raise if called with unloaded associations.
+  """
+  def progress(%{items: items}) when is_list(items) do
     total = length(items)
     done = Enum.count(items, &(&1.status in [:answered, :skipped]))
     {done, total}
   end
 
-  def maybe_mark_completed(questionnaire) do
-    {done, total} = progress(questionnaire)
+  def maybe_mark_completed(%{status: :completed} = q), do: {:ok, q}
 
-    if total > 0 and done == total and questionnaire.status != :completed do
-      questionnaire
-      |> Questionnaire.changeset(%{status: :completed})
-      |> Repo.update()
-    else
-      {:ok, questionnaire}
+  def maybe_mark_completed(questionnaire) do
+    case progress(questionnaire) do
+      {total, total} when total > 0 ->
+        questionnaire
+        |> Questionnaire.changeset(%{status: :completed})
+        |> Repo.update()
+
+      _ ->
+        {:ok, questionnaire}
     end
   end
 end
