@@ -42,29 +42,11 @@ defmodule QuestionnaireCopilot.Questionnaires do
   # Questionnaire Items
 
   def create_items_from_text(questionnaire, text) when is_binary(text) do
-    lines =
-      text
-      |> String.split("\n")
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    items =
-      lines
-      |> Enum.with_index(1)
-      |> Enum.map(fn {question, position} ->
-        %{
-          original_question: question,
-          position: position,
-          status: :unmatched,
-          questionnaire_id: questionnaire.id,
-          inserted_at: now,
-          updated_at: now
-        }
-      end)
-
-    Repo.insert_all(QuestionnaireItem, items)
+    text
+    |> String.split("\n")
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> then(&create_items_from_list(questionnaire, &1))
   end
 
   def create_items_from_list(questionnaire, questions) when is_list(questions) do
@@ -99,11 +81,11 @@ defmodule QuestionnaireCopilot.Questionnaires do
     |> Repo.update()
   end
 
-  def to_csv(questionnaire) do
+  def to_csv(%{items: items}) when is_list(items) do
     header = "original_question,final_answer,status\r\n"
 
     rows =
-      questionnaire.items
+      items
       |> Enum.map(fn item ->
         [item.original_question, item.final_answer || "", to_string(item.status)]
         |> Enum.map(&csv_escape/1)
