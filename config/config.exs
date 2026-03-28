@@ -9,7 +9,8 @@ import Config
 
 config :questionnaire_copilot,
   ecto_repos: [QuestionnaireCopilot.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  demo_mode: false
 
 # Configure the endpoint
 config :questionnaire_copilot, QuestionnaireCopilotWeb.Endpoint,
