@@ -1,23 +1,27 @@
 defmodule QuestionnaireCopilotWeb.VaultLive do
   use QuestionnaireCopilotWeb, :live_view
 
-  alias QuestionnaireCopilot.Vault
+  alias QuestionnaireCopilot.DataStore
   alias QuestionnaireCopilot.Vault.QAPair
 
-  # Mount: called when the LiveView first loads.
-  # Initializes all the assigns (state) the template needs.
   def mount(_params, _session, socket) do
+    store = socket.assigns.store
+
     {:ok,
      socket
      |> assign(:search, "")
      |> assign(:active_tags, [])
-     |> assign(:all_tags, Vault.all_tags())
+     |> assign(:all_tags, DataStore.all_tags(store))
      |> assign(:show_all_tags, false)
-     |> assign(:qa_pairs, Vault.list_qa_pairs())
-     |> assign(:form, to_form(Vault.change_qa_pair(%QAPair{})))
+     |> assign(:qa_pairs, DataStore.list_qa_pairs(store))
+     |> assign(:form, to_form(DataStore.change_qa_pair(store, %QAPair{})))
      |> assign(:editing, nil)
      |> assign(:importing, false)
-     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1, max_file_size: 10_000_000)}
+     |> allow_upload(:csv,
+       accept: ~w(.csv),
+       max_entries: 1,
+       max_file_size: if(socket.assigns.demo_mode, do: 500_000, else: 10_000_000)
+     )}
   end
 
   # Handle search input — "phx-change" on the search form triggers this.
@@ -59,17 +63,18 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
     {:noreply,
      socket
      |> assign(:editing, :new)
-     |> assign(:form, to_form(Vault.change_qa_pair(%QAPair{})))}
+     |> assign(:form, to_form(DataStore.change_qa_pair(socket.assigns.store, %QAPair{})))}
   end
 
   # Open the form to edit an existing pair
   def handle_event("edit", %{"id" => id}, socket) do
-    qa_pair = Vault.get_qa_pair!(id)
+    store = socket.assigns.store
+    qa_pair = DataStore.get_qa_pair!(store, id)
 
     {:noreply,
      socket
      |> assign(:editing, qa_pair)
-     |> assign(:form, to_form(Vault.change_qa_pair(qa_pair)))}
+     |> assign(:form, to_form(DataStore.change_qa_pair(store, qa_pair)))}
   end
 
   # Cancel editing — close the form
@@ -82,10 +87,12 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
     # Tags come in as a comma-separated string, split into a list
     params = Map.update(params, "tags", [], &parse_tags/1)
 
+    store = socket.assigns.store
+
     result =
       case socket.assigns.editing do
-        :new -> Vault.create_qa_pair(params)
-        %QAPair{} = qa_pair -> Vault.update_qa_pair(qa_pair, params)
+        :new -> DataStore.create_qa_pair(store, params)
+        %QAPair{} = qa_pair -> DataStore.update_qa_pair(store, qa_pair, params)
       end
 
     case result do
@@ -103,12 +110,13 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
 
   # Delete a Q&A pair
   def handle_event("delete", %{"id" => id}, socket) do
-    qa_pair = Vault.get_qa_pair!(id)
-    {:ok, _} = Vault.delete_qa_pair(qa_pair)
+    store = socket.assigns.store
+    qa_pair = DataStore.get_qa_pair!(store, id)
+    {:ok, _} = DataStore.delete_qa_pair(store, qa_pair)
 
     {:noreply,
      socket
-     |> assign(:qa_pairs, Vault.search_qa_pairs(socket.assigns.search))
+     |> reload()
      |> put_flash(:info, "Q&A pair deleted.")}
   end
 
@@ -125,7 +133,7 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
         {:ok, File.read!(path)}
       end)
 
-    case Vault.import_csv(csv_content) do
+    case DataStore.import_csv(socket.assigns.store, csv_content) do
       {:ok, %{imported: imported, skipped: skipped}} ->
         msg =
           case {imported, skipped} do
@@ -146,16 +154,20 @@ defmodule QuestionnaireCopilotWeb.VaultLive do
   end
 
   defp apply_filters(socket) do
+    store = socket.assigns.store
+
     assign(
       socket,
       :qa_pairs,
-      Vault.search_and_filter(socket.assigns.search, socket.assigns.active_tags)
+      DataStore.search_and_filter(store, socket.assigns.search, socket.assigns.active_tags)
     )
   end
 
   defp reload(socket) do
+    store = socket.assigns.store
+
     socket
-    |> assign(:all_tags, Vault.all_tags())
+    |> assign(:all_tags, DataStore.all_tags(store))
     |> apply_filters()
   end
 

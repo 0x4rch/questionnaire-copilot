@@ -8,6 +8,7 @@ defmodule QuestionnaireCopilotWeb.Router do
     plug :put_root_layout, html: {QuestionnaireCopilotWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug QuestionnaireCopilotWeb.Plugs.DemoSession
   end
 
   pipeline :api do
@@ -20,7 +21,9 @@ defmodule QuestionnaireCopilotWeb.Router do
     get "/questionnaires/:id/export", ExportController, :csv
     get "/vault/export", ExportController, :vault_csv
 
-    live_session :default, layout: {QuestionnaireCopilotWeb.Layouts, :app} do
+    live_session :default,
+      layout: {QuestionnaireCopilotWeb.Layouts, :app},
+      on_mount: [QuestionnaireCopilotWeb.Hooks.DemoHook] do
       live "/", DashboardLive
       live "/vault", VaultLive
       live "/questionnaires", QuestionnaireLive.Index

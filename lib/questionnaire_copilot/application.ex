@@ -7,17 +7,24 @@ defmodule QuestionnaireCopilot.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      QuestionnaireCopilotWeb.Telemetry,
-      QuestionnaireCopilot.Repo,
-      {DNSCluster,
-       query: Application.get_env(:questionnaire_copilot, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: QuestionnaireCopilot.PubSub},
-      # Start a worker by calling: QuestionnaireCopilot.Worker.start_link(arg)
-      # {QuestionnaireCopilot.Worker, arg},
-      # Start to serve requests, typically the last entry
-      QuestionnaireCopilotWeb.Endpoint
-    ]
+    demo_children =
+      if QuestionnaireCopilot.Demo.enabled?() do
+        [
+          {Registry, keys: :unique, name: QuestionnaireCopilot.Demo.Registry},
+          QuestionnaireCopilot.Demo.SessionSupervisor
+        ]
+      else
+        []
+      end
+
+    children =
+      [
+        QuestionnaireCopilotWeb.Telemetry,
+        QuestionnaireCopilot.Repo,
+        {DNSCluster,
+         query: Application.get_env(:questionnaire_copilot, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: QuestionnaireCopilot.PubSub}
+      ] ++ demo_children ++ [QuestionnaireCopilotWeb.Endpoint]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
