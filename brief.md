@@ -211,21 +211,6 @@ Start with the Vault CRUD, then questionnaire import, then the answering interfa
 
 ---
 
-## LinkedIn Pitch (Draft)
-> Security questionnaires were eating 5+ hours of my week. Same questions, scattered answers, endless copy-paste.
->
-> Built a tool in Phoenix LiveView to fix it:
-> - Maintain a searchable vault of approved Q&A pairs
-> - Import incoming questionnaires
-> - Smart matching suggests answers in real-time
-> - Accept, edit, or skip — keyboard-driven workflow
->
-> Phase 2 adds AI: semantic search + Claude-powered answer drafting.
->
-> Open source: [link]
-
----
-
 ## Notes for Claude CLI
 When working on this project:
 1. Prioritize working code over perfection — this is a learning project
