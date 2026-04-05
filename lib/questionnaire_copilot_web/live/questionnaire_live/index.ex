@@ -1,23 +1,17 @@
 defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
   use QuestionnaireCopilotWeb, :live_view
 
-  alias QuestionnaireCopilot.DataStore
+  alias QuestionnaireCopilot.Questionnaires
   alias QuestionnaireCopilot.Questionnaires.Questionnaire
 
   def mount(_params, _session, socket) do
-    store = socket.assigns.store
-
     {:ok,
      socket
-     |> assign(:questionnaires, DataStore.list_questionnaires(store))
-     |> assign(:form, to_form(DataStore.change_questionnaire(store, %Questionnaire{})))
+     |> assign(:questionnaires, Questionnaires.list_questionnaires())
+     |> assign(:form, to_form(Questionnaires.change_questionnaire(%Questionnaire{})))
      |> assign(:creating, false)
      |> assign(:input_mode, :text)
-     |> allow_upload(:csv,
-       accept: ~w(.csv),
-       max_entries: 1,
-       max_file_size: if(socket.assigns.demo_mode, do: 500_000, else: 10_000_000)
-     )}
+     |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1, max_file_size: 10_000_000)}
   end
 
   def handle_event("toggle-form", _, socket) do
@@ -48,20 +42,18 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
         nil
       end
 
-    store = socket.assigns.store
-
-    case DataStore.create_questionnaire(store, params) do
+    case Questionnaires.create_questionnaire(params) do
       {:ok, questionnaire} ->
         if csv_questions do
-          DataStore.create_items_from_list(store, questionnaire, csv_questions)
+          Questionnaires.create_items_from_list(questionnaire, csv_questions)
         else
-          DataStore.create_items_from_text(store, questionnaire, questions_text)
+          Questionnaires.create_items_from_text(questionnaire, questions_text)
         end
 
         {:noreply,
          socket
          |> assign(:creating, false)
-         |> assign(:questionnaires, DataStore.list_questionnaires(store))
+         |> assign(:questionnaires, Questionnaires.list_questionnaires())
          |> put_flash(:info, "Questionnaire created.")}
 
       {:error, changeset} ->
@@ -70,13 +62,12 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Index do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    store = socket.assigns.store
-    questionnaire = DataStore.get_questionnaire!(store, id)
-    {:ok, _} = DataStore.delete_questionnaire(store, questionnaire)
+    questionnaire = Questionnaires.get_questionnaire!(id)
+    {:ok, _} = Questionnaires.delete_questionnaire(questionnaire)
 
     {:noreply,
      socket
-     |> assign(:questionnaires, DataStore.list_questionnaires(store))
+     |> assign(:questionnaires, Questionnaires.list_questionnaires())
      |> put_flash(:info, "Questionnaire deleted.")}
   end
 

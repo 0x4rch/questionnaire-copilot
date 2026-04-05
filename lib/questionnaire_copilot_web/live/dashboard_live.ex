@@ -1,13 +1,13 @@
 defmodule QuestionnaireCopilotWeb.DashboardLive do
   use QuestionnaireCopilotWeb, :live_view
 
-  alias QuestionnaireCopilot.DataStore
+  alias QuestionnaireCopilot.Vault
+  alias QuestionnaireCopilot.Questionnaires
 
   def mount(_params, _session, socket) do
-    store = socket.assigns.store
-    qa_pairs = DataStore.list_qa_pairs(store)
-    questionnaires = DataStore.list_questionnaires(store)
-    tags = DataStore.all_tags(store)
+    qa_pairs = Vault.list_qa_pairs()
+    questionnaires = Questionnaires.list_questionnaires()
+    tags = Vault.all_tags()
 
     in_progress =
       Enum.filter(questionnaires, &(&1.status == :in_progress))

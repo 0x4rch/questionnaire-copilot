@@ -1,11 +1,11 @@
 defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
   use QuestionnaireCopilotWeb, :live_view
 
-  alias QuestionnaireCopilot.DataStore
+  alias QuestionnaireCopilot.Questionnaires
+  alias QuestionnaireCopilot.Vault
 
   def mount(%{"id" => id}, _session, socket) do
-    store = socket.assigns.store
-    questionnaire = DataStore.get_questionnaire!(store, id)
+    questionnaire = Questionnaires.get_questionnaire!(id)
     items = questionnaire.items
     current_index = find_first_unanswered(items)
 
@@ -14,7 +14,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
      |> assign(:questionnaire, questionnaire)
      |> assign(:items, items)
      |> assign(:current_index, current_index)
-     |> assign(:matches, find_matches(store, items, current_index))
+     |> assign(:matches, find_matches(items, current_index))
      |> assign(:editing_answer, false)
      |> assign(:manual_answer, "")
      |> assign(:vault_prompt, nil)
@@ -24,12 +24,11 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
   # Accept a matched answer — already in vault, no prompt needed
   def handle_event("accept", %{"qa-id" => qa_id}, socket) do
-    store = socket.assigns.store
-    qa_pair = DataStore.get_qa_pair!(store, qa_id)
+    qa_pair = Vault.get_qa_pair!(qa_id)
     item = current_item(socket)
 
     {:ok, _} =
-      DataStore.update_item(store, item, %{
+      Questionnaires.update_item(item, %{
         final_answer: qa_pair.answer,
         matched_qa_pair_id: qa_pair.id,
         status: :answered
@@ -40,7 +39,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
   # Accept and open editor to tweak the answer
   def handle_event("accept-edit", %{"qa-id" => qa_id}, socket) do
-    qa_pair = DataStore.get_qa_pair!(socket.assigns.store, qa_id)
+    qa_pair = Vault.get_qa_pair!(qa_id)
 
     {:noreply,
      socket
@@ -60,22 +59,22 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
   # Save the edited/manual answer — check if vault needs this
   def handle_event("save-answer", %{"answer" => answer}, socket) do
-    store = socket.assigns.store
     item = current_item(socket)
     matched_id = socket.assigns[:matched_qa_pair_id]
 
     {:ok, _} =
-      DataStore.update_item(store, item, %{
+      Questionnaires.update_item(item, %{
         final_answer: answer,
         matched_qa_pair_id: matched_id,
         status: :answered
       })
 
     # If no close match in vault, stay on this question and prompt
-    if !DataStore.has_close_match?(store, item.original_question) do
-      questionnaire = DataStore.get_questionnaire!(store, socket.assigns.questionnaire.id)
-      {:ok, questionnaire} = DataStore.maybe_mark_completed(store, questionnaire)
-      questionnaire = DataStore.get_questionnaire!(store, questionnaire.id)
+    if !Vault.has_close_match?(item.original_question) do
+      # Reload items so status updates, but stay on current index
+      questionnaire = Questionnaires.get_questionnaire!(socket.assigns.questionnaire.id)
+      {:ok, questionnaire} = Questionnaires.maybe_mark_completed(questionnaire)
+      questionnaire = Questionnaires.get_questionnaire!(questionnaire.id)
 
       {:noreply,
        socket
@@ -95,7 +94,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
   # Skip the current question
   def handle_event("skip", _, socket) do
     item = current_item(socket)
-    {:ok, _} = DataStore.update_item(socket.assigns.store, item, %{status: :skipped})
+    {:ok, _} = Questionnaires.update_item(item, %{status: :skipped})
     {:noreply, reload_and_advance(socket)}
   end
 
@@ -103,7 +102,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
   def handle_event("save-to-vault", _, socket) do
     case socket.assigns.vault_prompt do
       %{question: q, answer: a} ->
-        DataStore.create_qa_pair(socket.assigns.store, %{
+        Vault.create_qa_pair(%{
           question: q,
           answer: a,
           tags: [],
@@ -147,7 +146,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
 
   # Search vault from within questionnaire
   def handle_event("vault-search", %{"vault_search" => query}, socket) do
-    results = if query != "", do: DataStore.search_qa_pairs(socket.assigns.store, query), else: []
+    results = if query != "", do: Vault.search_qa_pairs(query), else: []
     {:noreply, assign(socket, vault_search: query, vault_results: results)}
   end
 
@@ -158,7 +157,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     {:noreply,
      socket
      |> assign(:current_index, index)
-     |> assign(:matches, find_matches(socket.assigns.store, socket.assigns.items, index))
+     |> assign(:matches, find_matches(socket.assigns.items, index))
      |> assign(:editing_answer, false)
      |> assign(:vault_prompt, nil)}
   end
@@ -178,7 +177,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     {:noreply,
      socket
      |> assign(:current_index, next)
-     |> assign(:matches, find_matches(socket.assigns.store, socket.assigns.items, next))
+     |> assign(:matches, find_matches(socket.assigns.items, next))
      |> assign(:editing_answer, false)}
   end
 
@@ -188,7 +187,7 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     {:noreply,
      socket
      |> assign(:current_index, prev)
-     |> assign(:matches, find_matches(socket.assigns.store, socket.assigns.items, prev))
+     |> assign(:matches, find_matches(socket.assigns.items, prev))
      |> assign(:editing_answer, false)}
   end
 
@@ -210,18 +209,16 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     Enum.find_index(items, &(&1.status in [:unmatched, :matched])) || 0
   end
 
-  defp find_matches(store, items, index) do
+  defp find_matches(items, index) do
     case Enum.at(items, index) do
       nil -> []
-      item -> DataStore.search_qa_pairs(store, item.original_question)
+      item -> Vault.search_qa_pairs(item.original_question)
     end
   end
 
   defp reload_and_advance(socket) do
-    store = socket.assigns.store
-    questionnaire = DataStore.get_questionnaire!(store, socket.assigns.questionnaire.id)
-    {:ok, questionnaire} = DataStore.maybe_mark_completed(store, questionnaire)
-    questionnaire = DataStore.get_questionnaire!(store, questionnaire.id)
+    questionnaire = Questionnaires.get_questionnaire!(socket.assigns.questionnaire.id)
+    {:ok, questionnaire} = Questionnaires.maybe_mark_completed(questionnaire)
     items = questionnaire.items
     next_index = find_first_unanswered(items)
 
@@ -229,12 +226,12 @@ defmodule QuestionnaireCopilotWeb.QuestionnaireLive.Show do
     |> assign(:questionnaire, questionnaire)
     |> assign(:items, items)
     |> assign(:current_index, next_index)
-    |> assign(:matches, find_matches(store, items, next_index))
+    |> assign(:matches, find_matches(items, next_index))
     |> assign(:editing_answer, false)
   end
 
   def render(assigns) do
-    {done, total} = DataStore.progress(assigns.store, assigns.questionnaire)
+    {done, total} = Questionnaires.progress(assigns.questionnaire)
     assigns = assign(assigns, :done, done) |> assign(:total, total)
     current = Enum.at(assigns.items, assigns.current_index)
     assigns = assign(assigns, :current, current)

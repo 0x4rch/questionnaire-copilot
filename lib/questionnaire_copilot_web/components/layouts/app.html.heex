@@ -1,10 +1,4 @@
 <div class="min-h-screen flex flex-col bg-base-200">
-  <div
-    :if={Application.get_env(:questionnaire_copilot, :demo_mode, false)}
-    class="bg-primary text-primary-content text-center py-1.5 text-xs tracking-wide"
-  >
-    DEMO — your data lives in this session only and resets when you leave
-  </div>
   <header class="navbar bg-base-100 shadow-sm px-4 sm:px-6 lg:px-8">
     <div class="flex-1">
       <a href="/" class="btn btn-ghost text-lg font-bold normal-case gap-2">
