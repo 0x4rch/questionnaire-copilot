@@ -24,7 +24,8 @@ A self-hosted Phoenix LiveView application that helps security/compliance profes
 
 - **Q&A Vault** — Maintain a searchable library of approved answers with tags and sources
 - **Questionnaire Import** — Paste questions or upload CSV to create questionnaires
-- **Smart Matching** — Trigram similarity matching suggests relevant vault answers for each question
+- **Semantic Search** — Embedding-based similarity matching (Bumblebee/Nx + pgvector) suggests relevant vault answers even when wording differs completely
+- **Trigram Fallback** — Configurable search backend with trigram similarity as a lightweight alternative
 - **Answering Workflow** — Accept, edit, skip, or write answers with keyboard shortcuts (j/k/s)
 - **Vault Search** — Search the vault by question or answer text from within the answering flow
 - **Tag Filtering** — Filter vault by clickable tags with counts
@@ -41,7 +42,8 @@ A self-hosted Phoenix LiveView application that helps security/compliance profes
 |-----------|---------|
 | Elixir | 1.19+ (OTP 28) |
 | Phoenix | 1.8 with LiveView |
-| PostgreSQL | 18 with pg_trgm |
+| PostgreSQL | 18 with pgvector + pg_trgm |
+| ML Runtime | Bumblebee/Nx with EXLA (sentence-transformers/all-MiniLM-L6-v2) |
 | CSS | Tailwind + daisyUI |
 | JavaScript | None (just LiveView) |
 
@@ -77,7 +79,7 @@ asdf set elixir 1.19.5-otp-28
 git clone https://github.com/0x4rch/questionnaire-copilot.git
 cd questionnaire-copilot
 
-# Start PostgreSQL
+# Start PostgreSQL (uses pgvector/pgvector image)
 docker compose up -d
 
 # Install dependencies and set up database
@@ -86,8 +88,11 @@ mix setup
 # Seed sample data (optional)
 mix run priv/repo/seeds.exs
 
-# Start Phoenix server
+# Start Phoenix server (downloads ML model on first run, ~80MB)
 mix phx.server
+
+# Backfill embeddings for existing vault entries
+mix embeddings.backfill
 ```
 
 Visit [localhost:4000](http://localhost:4000).
@@ -129,9 +134,25 @@ How do you handle incident response?,operations
 
 Only the `question` column is required; other columns are ignored.
 
+## Search Backends
+
+The search backend is configurable in `config/config.exs`:
+
+```elixir
+config :questionnaire_copilot, :search_backend, :semantic  # default
+# config :questionnaire_copilot, :search_backend, :trigram  # lightweight, no ML model
+```
+
+| Backend | How it works | Tradeoffs |
+|---------|-------------|-----------|
+| `:semantic` | Embeddings via Bumblebee/Nx + pgvector cosine similarity | Best match quality, ~300-500MB RAM for model |
+| `:trigram` | PostgreSQL pg_trgm fuzzy matching | No ML overhead, only matches lexically similar text |
+
+Embeddings are generated automatically when Q&A pairs are created or updated. Run `mix embeddings.backfill` to embed existing data.
+
 ## Roadmap
 
-- [ ] Semantic search with embeddings (pgvector)
+- [ ] Configurable embedding providers (OpenAI, Anthropic, Ollama)
 - [ ] AI answer drafting with Claude API
 - [ ] Bulk auto-processing of questionnaires
 - [ ] Authentication for multi-user deployment

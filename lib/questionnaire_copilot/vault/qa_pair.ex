@@ -7,6 +7,7 @@ defmodule QuestionnaireCopilot.Vault.QAPair do
     field :answer, :string
     field :tags, {:array, :string}, default: []
     field :source, :string
+    field :embedding, Pgvector.Ecto.Vector
 
     has_many :matched_items, QuestionnaireCopilot.Questionnaires.QuestionnaireItem,
       foreign_key: :matched_qa_pair_id

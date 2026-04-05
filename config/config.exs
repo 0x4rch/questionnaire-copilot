@@ -9,7 +9,13 @@ import Config
 
 config :questionnaire_copilot,
   ecto_repos: [QuestionnaireCopilot.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  search_backend: :semantic
+
+config :questionnaire_copilot, QuestionnaireCopilot.Repo,
+  types: QuestionnaireCopilot.PostgrexTypes
+
+config :nx, :default_backend, EXLA.Backend
 
 # Configure the endpoint
 config :questionnaire_copilot, QuestionnaireCopilotWeb.Endpoint,

@@ -26,6 +26,10 @@ config :questionnaire_copilot, QuestionnaireCopilot.Mailer, adapter: Swoosh.Adap
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 
+# Don't load the ML model in tests
+config :questionnaire_copilot, :start_embedding_serving, false
+config :questionnaire_copilot, :search_backend, :trigram
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
